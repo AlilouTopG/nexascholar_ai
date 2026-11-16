@@ -722,7 +722,6 @@
     h2.title-grad { font-size:1.4rem; }
   }
   @media (max-width:480px) {
-    #install-label { display:none; }
     #model-chip, #cefr-chip { display:none !important; }
     .stat-grid { gap:.6rem; } .stat { padding:.8rem .85rem; }
     .stat .l { font-size:.7rem; }
@@ -760,6 +759,105 @@
     .ws-root .ed-bar button, .ws-root .ed-foot button { min-width:44px; }
   }
 
+/* =====================================================================
+   v8  MOBILE APP UI: bottom tab bar, bottom-sheet chat, install modal
+   ===================================================================== */
+#tabbar, #chat-scrim, .tb-logo, .sb-mobile { display:none; }
+#inst-modal[hidden] { display:none; }
+#inst-modal { position:fixed; inset:0; z-index:1300; display:flex; align-items:center; justify-content:center; padding:1rem; background:rgba(2,6,14,.68); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); animation:fade .2s ease both; }
+.inst-card { width:min(440px,100%); max-height:calc(100vh - 2rem); max-height:calc(100dvh - 2rem); overflow:auto; display:flex; flex-direction:column; gap:1rem; padding:1.25rem; border-radius:20px; background:var(--glass-strong); -webkit-backdrop-filter:blur(24px) saturate(160%); backdrop-filter:blur(24px) saturate(160%); border:1px solid var(--line-strong); box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 60px -20px var(--em-glow), inset 0 1px 0 rgba(255,255,255,.08); }
+.inst-seg { display:flex; width:100%; } .inst-seg button { flex:1; min-height:40px; }
+.inst-steps { list-style:none; counter-reset:st; display:grid; gap:.6rem; margin:0; padding:0; }
+.inst-steps li { counter-increment:st; position:relative; padding:.8rem .9rem .8rem 3.1rem; border:1px solid var(--line); border-radius:.85rem; background:var(--fill); font-size:.9rem; line-height:1.55; color:var(--text-b); overflow-wrap:anywhere; }
+.inst-steps li::before { content:counter(st); position:absolute; left:.8rem; top:.75rem; width:1.7rem; height:1.7rem; border-radius:50%; display:grid; place-items:center; font-weight:800; font-size:.8rem; background:linear-gradient(135deg,#34D399,#38BDF8); color:#052018; box-shadow:0 0 16px -2px var(--em-glow); }
+.inst-steps b { color:var(--text-h); }
+.inst-k { font-family:'JetBrains Mono',monospace; font-size:.78rem; padding:0 .35rem; border:1px solid var(--line-strong); border-radius:.35rem; }
+.inst-note { font-size:.75rem; line-height:1.5; color:#FBBF24; }
+body.modal-open #main-scroll { overflow:hidden; }
+@keyframes sheet-up { from { transform:translateY(24px); opacity:0; } to { transform:none; opacity:1; } }
+
+@media (max-width:768px), (max-height:500px) and (orientation:landscape) and (pointer:coarse) {
+  :root { --bar-h:64px; }
+  html, body { max-width:100vw; overflow-x:hidden; }
+  :where(.flex, .grid, .ws-grid, .stat-grid, .qa-grid, .lab-grid, .stack, .bento2, .brief, .seg, .card, .chat-form, .mk) > :where(*) { min-width:0; }
+  .mermaid, .dg-viewport { max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .katex-display { max-width:100%; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+  .prose-nx table { display:block; max-width:100%; overflow-x:auto; }
+  .prose-nx pre { max-width:100%; overflow-x:auto; }
+
+  /* top bar: brand mark replaces the hamburger (the Menu tab opens the drawer) */
+  #topbar { padding-top:env(safe-area-inset-top); padding-left:max(.75rem, env(safe-area-inset-left)); padding-right:max(.75rem, env(safe-area-inset-right)); }
+  .tb-logo { display:flex; width:2.25rem; height:2.25rem; flex:none; }
+  #sb-toggle { display:none; }
+  #install-btn { display:inline-flex; flex:none; }
+  .sb-mobile { display:block; }
+
+  /* content never hides behind the bar */
+  #main-scroll { padding-bottom:calc(88px + env(safe-area-inset-bottom)); }
+
+  /* ----- bottom tab bar ----- */
+  #tabbar { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:900; height:calc(var(--bar-h) + env(safe-area-inset-bottom)); padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:rgba(8,13,24,.78); -webkit-backdrop-filter:blur(22px) saturate(170%); backdrop-filter:blur(22px) saturate(170%); border-top:1px solid var(--line-strong); box-shadow:0 -10px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05); }
+  #tabbar button { position:relative; flex:1 1 0; min-width:0; min-height:44px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:6px 2px; color:var(--muted); font-size:10.5px; font-weight:700; letter-spacing:.01em; background:transparent; -webkit-tap-highlight-color:transparent; transition:color .15s; }
+  #tabbar button i, #tabbar button svg { width:22px; height:22px; stroke-width:1.9; transition:transform .2s, filter .2s; }
+  #tabbar button span { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #tabbar button:active { transform:scale(.94); }
+  #tabbar button.active { color:var(--em-t); }
+  #tabbar button.active svg { filter:drop-shadow(0 0 7px var(--em-glow)); transform:translateY(-1px); }
+  #tabbar button.active::before { content:''; position:absolute; top:0; left:50%; width:30px; height:3px; margin-left:-15px; border-radius:0 0 4px 4px; background:linear-gradient(90deg,#34D399,#38BDF8); box-shadow:0 0 12px var(--em-glow); }
+  #tabbar button:focus-visible { outline:2px solid var(--em-t); outline-offset:-4px; border-radius:12px; }
+
+  /* drawer / toasts / modal sit above the bar */
+  #sidebar { z-index:1100; }
+  body.sb-open #sb-backdrop { z-index:1050; }
+  #toasts { z-index:1200; top:calc(env(safe-area-inset-top) + 8px); }
+
+  /* ----- follow-up chat: closed = floating pill above the bar, open = bottom sheet ----- */
+  .chat { bottom:calc(var(--bar-h) + env(safe-area-inset-bottom) + 8px); }
+  .chat.open { position:fixed; left:0; right:0; bottom:calc(var(--bar-h) + env(safe-area-inset-bottom)); width:100%; margin:0; z-index:1000; height:78vh; height:78dvh;
+    max-height:calc(100vh - var(--bar-h) - env(safe-area-inset-bottom) - 12px); max-height:calc(100dvh - var(--bar-h) - env(safe-area-inset-bottom) - 12px);
+    border-radius:20px 20px 0 0; border-bottom:0; display:flex; flex-direction:column; animation:sheet-up .3s cubic-bezier(.2,.8,.2,1) both; box-shadow:0 -18px 60px rgba(0,0,0,.65), 0 0 50px -18px var(--em-glow), inset 0 1px 0 rgba(255,255,255,.08); }
+  .chat.open .chat-head { position:relative; flex:none; padding-top:1.3rem; }
+  .chat.open .chat-head::before { content:''; position:absolute; top:.5rem; left:50%; width:38px; height:4px; margin-left:-19px; border-radius:4px; background:var(--line-strong); }
+  .chat.open .chat-panel { display:flex; flex-direction:column; flex:1 1 auto; min-height:0; }
+  .chat.open .chat-panel > div { display:flex; flex-direction:column; flex:1 1 auto; min-height:0; overflow:hidden; }
+  .chat.open .chat-msgs { flex:1 1 auto; max-height:none; min-height:0; overscroll-behavior:contain; }
+  .chat.open .chat-chips, .chat.open .chat-form { flex:none; }
+  .chat.open .chat-form { padding-bottom:max(.75rem, env(safe-area-inset-bottom)); }
+  body.chat-sheet #chat-scrim { display:block; position:fixed; inset:0; z-index:850; background:rgba(2,6,14,.55); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); animation:fade .2s ease both; }
+}
+
+/* sideways phones: slimmer bar with icon and label side by side */
+@media (max-height:500px) and (orientation:landscape) and (pointer:coarse) {
+  :root { --bar-h:52px; }
+  #main-scroll { padding-bottom:calc(72px + env(safe-area-inset-bottom)); }
+  #tabbar button { flex-direction:row; gap:6px; font-size:11px; }
+  #tabbar button i, #tabbar button svg { width:20px; height:20px; }
+  #tabbar button.active::before { width:24px; margin-left:-12px; }
+  .chat.open { height:calc(100dvh - var(--bar-h) - env(safe-area-inset-bottom) - 8px); max-height:none; }
+  .chat.open .chat-head { padding-top:1rem; }
+  .chat.open .chat-head::before { top:.3rem; }
+}
+@media (max-width:768px) and (orientation:portrait) {
+  #topbar { height:calc(4rem + env(safe-area-inset-top)); }
+}
+
+/* phones in portrait: zero-overflow, balanced grids and stacked controls */
+@media (max-width:768px) {
+  .stat-grid { grid-template-columns:repeat(2, 1fr); gap:10px; }
+  .qa-grid { grid-template-columns:1fr; gap:10px; }
+  .dom-seg, .reg-seg { display:flex; flex-direction:column; width:100%; }
+  .dom-seg button, .reg-seg button { width:100%; min-height:44px; text-align:center; }
+  .brief { flex-direction:column; align-items:stretch; }
+  .brief .btn-primary, .brief .icon-btn, .brief .brief-voice, .brief .seg { flex:none; width:100%; min-height:44px; justify-content:center; }
+  .brief .seg button { flex:1; min-height:44px; }
+  .mk { grid-template-columns:1fr; }
+  .mk-bad, .mk-good { width:100%; }
+  .lab-tabs { width:100%; } .lab-tabs button { flex:1 0 auto; }
+  .lesson-bar .btn-primary, .lesson-bar .btn-ghost { width:100%; justify-content:center; }
+}
+@media (max-width:359px) { #install-label { display:none; } }
+
 </style>
 </head>
 <body>
@@ -795,6 +893,13 @@
       <span id="hist-count" class="font-mono text-[11px] text-slate-400">0</span>
     </div>
     <div id="history-list" class="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5"></div>
+    <div class="sb-mobile px-3 pt-3 pb-1 border-t border-line">
+      <div class="nav-h" style="padding:0 0 .4rem">Settings</div>
+      <div class="grid grid-cols-2 gap-2">
+        <button id="sb-cefr" class="btn-ghost justify-center"><i data-lucide="target" class="w-4 h-4 text-amber"></i>Level <b class="font-mono text-amber" id="sb-cefr-v">B2</b></button>
+        <button id="sb-install" class="btn-ghost justify-center"><i data-lucide="download" class="w-4 h-4"></i>Install App</button>
+      </div>
+    </div>
     <div class="p-3 border-t border-line">
       <button id="new-btn" class="btn-primary w-full mb-2"><i data-lucide="plus" class="w-4 h-4"></i> <span id="new-label">New Analysis</span></button>
       <button id="clear-btn" class="btn-ghost w-full justify-center" style="color:var(--danger)"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear History</button>
@@ -804,10 +909,11 @@
 
   <div class="flex-1 min-w-0 flex flex-col h-full">
     <header id="topbar" class="no-print flex items-center gap-3 px-3 sm:px-6 h-16 glass-bar flex-none">
+      <div class="tb-logo logo-mark rounded-lg items-center justify-center font-mono font-bold" aria-hidden="true">N</div>
       <button id="sb-toggle" class="icon-btn" aria-label="Toggle sidebar"><i data-lucide="panel-left" class="w-4 h-4"></i></button>
       <h1 id="view-title" class="text-sm sm:text-base font-extrabold tracking-tight truncate">Dashboard</h1>
       <span class="flex-1"></span>
-      <button id="install-btn" class="btn-ghost is-off" title="Install NexaScholar as an app"><i data-lucide="download" class="w-4 h-4"></i><span id="install-label">Install App</span></button>
+      <button id="install-btn" class="btn-ghost" title="Install NexaScholar as an app" aria-label="Install App" aria-haspopup="dialog"><i data-lucide="download" class="w-4 h-4"></i><span id="install-label">Install App</span></button>
       <button id="cefr-chip" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold border border-line rounded-full px-3 py-1 hover:border-amber transition" title="Target CEFR level (click to change)">
         <i data-lucide="target" class="w-3.5 h-3.5 text-amber"></i>Target <b id="cefr-chip-v" class="font-mono text-amber">B2</b>
       </button>
@@ -974,6 +1080,38 @@
       </section>
 
     </main>
+  </div>
+</div>
+
+<!-- ================= MOBILE BOTTOM TAB BAR (<= 768px) ================= -->
+<nav id="tabbar" class="no-print" aria-label="App navigation">
+  <button data-tabws="dash"><i data-lucide="house"></i><span>Home</span></button>
+  <button data-tabws="paper"><i data-lucide="book-open-text"></i><span>Papers</span></button>
+  <button data-tabws="code"><i data-lucide="square-terminal"></i><span>Code</span></button>
+  <button data-tabws="lab"><i data-lucide="languages"></i><span>English</span></button>
+  <button data-tabmenu aria-expanded="false" aria-controls="sidebar"><i data-lucide="menu"></i><span>Menu</span></button>
+</nav>
+<div id="chat-scrim" class="no-print" aria-hidden="true"></div>
+
+<!-- ================= INSTALL HELP MODAL ================= -->
+<div id="inst-modal" class="no-print" role="dialog" aria-modal="true" aria-labelledby="inst-title" hidden>
+  <div class="inst-card">
+    <div class="flex items-start gap-3">
+      <div class="logo-mark w-10 h-10 rounded-xl flex items-center justify-center font-mono font-bold flex-none">N</div>
+      <div class="min-w-0 flex-1">
+        <h2 id="inst-title" class="text-base font-extrabold tracking-tight text-ink">Install NexaScholar AI</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Two quick steps. It then opens full-screen like a native app.</p>
+      </div>
+      <button class="icon-btn" id="inst-close" aria-label="Close"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <div class="seg inst-seg" role="tablist" aria-label="Platform">
+      <button role="tab" data-plat="ios">iPhone / iPad</button>
+      <button role="tab" data-plat="android">Android</button>
+      <button role="tab" data-plat="desktop">Desktop</button>
+    </div>
+    <ol id="inst-steps" class="inst-steps"></ol>
+    <p id="inst-note" class="inst-note" hidden></p>
+    <button class="btn-primary w-full justify-center" id="inst-ok">Got it</button>
   </div>
 </div>
 
@@ -1580,6 +1718,7 @@ function activeSession(ws) { return sessions.find(s => s.id === W[ws].activeId) 
    Sidebar + history
    ===================================================================== */
 const isMobile = () => window.innerWidth < 1024;
+const PHONE_UI = () => window.matchMedia('(max-width:768px), (max-height:500px) and (orientation:landscape) and (pointer:coarse)').matches;   // bottom-tab-bar layout: the chat starts as a closed sheet
 function toggleSidebar() {
   if (isMobile()) document.body.classList.toggle('sb-open');
   else ls.set('nexascholar.sb', document.body.classList.toggle('sb-collapsed') ? 'collapsed' : 'open');
@@ -2096,8 +2235,8 @@ function chatDrawer(ws, s) {
     ? ['Explain the core idea in simple terms', 'What are the main limitations?', 'Give me a real-world analogy']
     : ['Trace this with a small example input', 'What edge cases could break this?', 'How could this be optimized?'];
   return `
-    <div class="chat sec ${has ? 'open' : 'empty'}" data-chat data-sec="chat">
-      <button class="chat-head" data-act="chat-toggle" aria-expanded="${has}">
+    <div class="chat sec ${has ? (PHONE_UI() ? '' : 'open') : 'empty'}" data-chat data-sec="chat">
+      <button class="chat-head" data-act="chat-toggle" aria-expanded="${has && !PHONE_UI()}">
         <span class="chat-title"><i data-lucide="${ws === 'code' ? 'bug' : 'message-circle'}" class="w-4 h-4 ${ws === 'code' ? 'text-cobalt' : 'text-emerald'}"></i>${ws === 'code' ? 'Interactive Debugging Chat' : 'Ask a Follow-up Question'}
           <span data-el="count" class="font-mono text-[11px] text-slate-500 bg-paper border border-line rounded-full px-2 ${has ? '' : 'hidden'}">${s.chat.length}</span></span>
         <i data-lucide="chevron-up" class="w-4 h-4 text-slate-500 chev"></i>
@@ -2666,7 +2805,7 @@ function setCefr(l) {
   cefr = LEVELS.includes(l) ? l : 'B2';
   ls.set('nexascholar.cefr', cefr);
   $$('#cefr-seg button').forEach(b => b.classList.toggle('active', b.dataset.level === cefr));
-  $('#cefr-chip-v').textContent = cefr;
+  $('#cefr-chip-v').textContent = cefr; $('#sb-cefr-v').textContent = cefr;
   if (state.ws === 'dash') renderDash();
 }
 
@@ -2967,18 +3106,68 @@ $('#lab-input').addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) 
 const Install = { evt: null };
 const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-function paintInstall() {
-  const show = !isStandalone() && (!!Install.evt || isIOS());
-  $('#install-btn').classList.toggle('is-off', !show);
+const isAndroid = () => /Android/i.test(navigator.userAgent);
+const INST_STEPS = {
+  ios: ['Tap the <b>Share</b> button <span class="inst-k">&#x2191;&#x25A1;</span> in the Safari toolbar.', 'Scroll down, tap <b>Add to Home Screen</b>, then tap <b>Add</b>.'],
+  android: ['In Chrome, tap the <b>&#8942; menu</b> at the top right.', 'Tap <b>Install app</b> (or <b>Add to Home screen</b>), then confirm with <b>Install</b>.'],
+  desktop: ['In Chrome or Edge, click the <b>Install</b> icon at the right end of the address bar (or <b>&#8942; &rarr; Install NexaScholar</b>).', 'Click <b>Install</b> in the pop-up. The app opens in its own window.']
+};
+let instPlat = isIOS() ? 'ios' : isAndroid() ? 'android' : 'desktop', instReturn = null;
+function paintInstallModal() {
+  $$('#inst-modal [data-plat]').forEach(b => { const on = b.dataset.plat === instPlat; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
+  $('#inst-steps').innerHTML = INST_STEPS[instPlat].map(t => '<li>' + t + '</li>').join('');
+  const note = $('#inst-note');
+  note.hidden = window.isSecureContext;
+  note.textContent = 'Installing needs a secure address (https:// or localhost). Open the app from its https link first.';
+}
+function openInstallModal() {
+  instReturn = document.activeElement; paintInstallModal();
+  $('#inst-modal').hidden = false; document.body.classList.add('modal-open');
+  $('#inst-ok').focus();
+}
+function closeInstallModal() {
+  $('#inst-modal').hidden = true; document.body.classList.remove('modal-open');
+  if (instReturn && instReturn.focus) instReturn.focus();
+}
+function paintInstall() { $('#install-btn').classList.toggle('is-off', isStandalone()); $('#sb-install').classList.toggle('is-off', isStandalone()); }
+async function installApp() {
+  if (Install.evt) {
+    const e = Install.evt; Install.evt = null;
+    try { await e.prompt(); await e.userChoice; } catch (err) { /* dismissed */ }
+    paintInstall();
+  } else openInstallModal();
 }
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); Install.evt = e; paintInstall(); });
-window.addEventListener('appinstalled', () => { Install.evt = null; paintInstall(); toast('NexaScholar was installed.', 'success'); });
-$('#install-btn').addEventListener('click', async () => {
-  if (Install.evt) {
-    const e = Install.evt; Install.evt = null; paintInstall();
-    try { await e.prompt(); await e.userChoice; } catch (err) { /* user dismissed */ }
-  } else if (isIOS()) toast('Tap Share → Add to Home Screen', 'info', 8000);
+window.addEventListener('appinstalled', () => { Install.evt = null; paintInstall(); closeInstallModal(); toast('NexaScholar was installed.', 'success'); });
+$('#install-btn').addEventListener('click', installApp);
+$('#sb-install').addEventListener('click', () => { document.body.classList.remove('sb-open'); syncTabbar(); installApp(); });
+$('#sb-cefr').addEventListener('click', () => setCefr(LEVELS[(LEVELS.indexOf(cefr) + 1) % LEVELS.length]));
+$('#inst-close').onclick = $('#inst-ok').onclick = closeInstallModal;
+$('#inst-modal').addEventListener('click', e => { if (e.target.id === 'inst-modal') closeInstallModal(); });
+$('#inst-modal').addEventListener('click', e => { const b = e.target.closest('[data-plat]'); if (b) { instPlat = b.dataset.plat; paintInstallModal(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#inst-modal').hidden) closeInstallModal(); });
+
+/* ---------------- Mobile bottom tab bar ---------------- */
+function syncTabbar() {
+  $$('#tabbar [data-tabws]').forEach(b => { const on = b.dataset.tabws === state.ws; b.classList.toggle('active', on && !document.body.classList.contains('sb-open')); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  const open = document.body.classList.contains('sb-open');
+  const m = $('#tabbar [data-tabmenu]'); m.classList.toggle('active', open); m.setAttribute('aria-expanded', String(open));
+}
+$('#tabbar').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.hasAttribute('data-tabmenu')) { document.body.classList.toggle('sb-open'); return syncTabbar(); }
+  if (state.ws === 'lab') labSave();
+  closeSheets();
+  setWorkspace(b.dataset.tabws);
 });
+new MutationObserver(syncTabbar).observe(document.body, { attributes: true, attributeFilter: ['class', 'data-ws'] });
+
+/* Chat bottom sheet: dim the page behind it while it is open on a phone */
+function closeSheets() { $$('[data-chat].open').forEach(c => { c.classList.remove('open'); const h = $('.chat-head', c); if (h) h.setAttribute('aria-expanded', 'false'); }); syncSheet(); }
+function syncSheet() { document.body.classList.toggle('chat-sheet', !!document.querySelector('[data-chat].open')); }
+new MutationObserver(syncSheet).observe($('#main-scroll'), { subtree: true, attributes: true, attributeFilter: ['class'], childList: true });
+$('#chat-scrim').addEventListener('click', closeSheets);
+syncTabbar(); syncSheet();
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {}));
 }
