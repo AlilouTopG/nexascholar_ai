@@ -17,7 +17,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -858,6 +858,48 @@ body.modal-open #main-scroll { overflow:hidden; }
 }
 @media (max-width:359px) { #install-label { display:none; } }
 
+/* =====================================================================
+   v9  trilingual bridges + level-up banner
+   ===================================================================== */
+.reg-seg { flex-wrap:wrap; max-width:100%; }
+.rtl-pane { text-align:right; font-family:'Noto Sans Arabic','Plus Jakarta Sans',system-ui,sans-serif; line-height:2; font-size:.95rem; }
+.rtl-pane ul, .rtl-pane ol { padding-right:1.35rem; padding-left:0; }
+.rtl-pane .katex-display { direction:ltr; text-align:center; }
+.rtl-pane .katex { direction:ltr; unicode-bidi:isolate; display:inline-block; }
+.rtl-pane h4 { text-align:right; }
+.bridge-miss { color:var(--muted); font-size:.85rem; font-style:italic; }
+.tr-row { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.55rem; }
+.tr-badge { display:inline-flex; align-items:center; gap:.4rem; max-width:100%; padding:.15rem .55rem .15rem .2rem; border-radius:999px; border:1px solid var(--line-strong); background:var(--fill); font-size:.8rem; color:var(--text-h); min-width:0; }
+.tr-badge b { font-family:'JetBrains Mono',monospace; font-size:.6rem; font-weight:700; padding:.1rem .4rem; border-radius:999px; letter-spacing:.04em; flex:none; }
+.tr-badge.ar b { color:#052018; background:linear-gradient(135deg,#34D399,#10B981); }
+.tr-badge.fr b { color:#04202D; background:linear-gradient(135deg,#7DD3FC,#38BDF8); }
+.tr-badge > span { overflow-wrap:anywhere; min-width:0; }
+.tr-badge.ar > span { font-family:'Noto Sans Arabic','Plus Jakarta Sans',system-ui,sans-serif; font-size:.9rem; line-height:1.5; }
+.gram-note { display:flex; gap:.45rem; align-items:flex-start; margin-top:.6rem; padding:.45rem .6rem; border-radius:.65rem; border:1px solid rgba(251,191,36,.3); background:var(--am-soft); font-size:.78rem; line-height:1.5; color:var(--text-b); }
+.gram-note svg { flex:none; margin-top:.15rem; color:var(--am-t); } .gram-note b { color:var(--am-t); }
+.face-tr { display:flex; justify-content:center; margin-bottom:.6rem; } .face-tr .tr-row { justify-content:center; margin:0; }
+#cefr-seg { flex-wrap:wrap; }
+
+.levelup { position:relative; display:flex; align-items:center; gap:1rem; padding:1rem 1.15rem; margin-bottom:1rem; border-radius:1.1rem; overflow:hidden; isolation:isolate;
+  border:1px solid rgba(251,191,36,.55); background:linear-gradient(110deg, rgba(16,185,129,.20), rgba(251,191,36,.16) 55%, rgba(56,189,248,.16)), var(--glass-strong);
+  -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); box-shadow:0 0 0 1px rgba(52,211,153,.25), 0 18px 60px -18px rgba(251,191,36,.45), 0 0 70px -20px var(--em-glow); animation:lu-glow 2.8s ease-in-out infinite; }
+.levelup.hidden { display:none; }
+.levelup::before { content:''; position:absolute; inset:-60% -10%; z-index:-1; background:radial-gradient(40% 50% at 15% 50%, rgba(52,211,153,.30), transparent 70%), radial-gradient(35% 50% at 85% 40%, rgba(251,191,36,.28), transparent 70%); animation:lu-drift 9s ease-in-out infinite alternate; }
+.levelup.pop { animation:lu-pop .7s cubic-bezier(.2,1.2,.3,1) both, lu-glow 2.8s ease-in-out .7s infinite; }
+.lu-ic { flex:none; width:3rem; height:3rem; border-radius:1rem; display:grid; place-items:center; color:#2A1B00; background:linear-gradient(135deg,#FDE68A,#FBBF24 55%,#34D399); box-shadow:0 0 28px -4px rgba(251,191,36,.8); }
+.lu-t { font-weight:800; font-size:1.05rem; letter-spacing:-.01em; color:var(--text-h); }
+.lu-s { font-size:.82rem; line-height:1.5; color:var(--muted); margin-top:.15rem; }
+.lu-btn { flex:none; white-space:nowrap; box-shadow:0 0 26px -4px var(--em-glow); }
+.lu-btn span { font-size:1.05em; }
+@keyframes lu-glow { 0%,100% { box-shadow:0 0 0 1px rgba(52,211,153,.25), 0 18px 60px -18px rgba(251,191,36,.40), 0 0 60px -22px var(--em-glow); } 50% { box-shadow:0 0 0 1px rgba(251,191,36,.45), 0 18px 70px -14px rgba(251,191,36,.65), 0 0 90px -16px var(--em-glow); } }
+@keyframes lu-drift { from { transform:translateX(-4%); } to { transform:translateX(4%); } }
+@keyframes lu-pop { from { transform:scale(.92) translateY(10px); opacity:0; } to { transform:none; opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .levelup, .levelup::before, .levelup.pop { animation:none; } }
+@media (max-width:640px) { .levelup { flex-wrap:wrap; } .lu-body { flex:1 1 calc(100% - 4rem); } .lu-btn { flex:1 1 100%; width:100%; justify-content:center; min-height:44px; } }
+@media print { .levelup { display:none !important; } }
+body.print-lesson .levelup { display:none !important; }
+.brief.hidden { display:none !important; }
+
 </style>
 </head>
 <body>
@@ -1057,7 +1099,7 @@ body.modal-open #main-scroll { overflow:hidden; }
             <div class="flex flex-col items-start gap-1.5">
               <span class="text-xs font-semibold text-slate-500">Your CEFR level</span>
               <div class="seg" id="cefr-seg" role="group" aria-label="CEFR level">
-                <button data-act="cefr" data-level="A2">A2</button><button data-act="cefr" data-level="B1">B1</button><button data-act="cefr" data-level="B2">B2</button><button data-act="cefr" data-level="C1">C1</button>
+                <button data-act="cefr" data-level="A1">A1</button><button data-act="cefr" data-level="A2">A2</button><button data-act="cefr" data-level="B1">B1</button><button data-act="cefr" data-level="B2">B2</button><button data-act="cefr" data-level="C1">C1</button><button data-act="cefr" data-level="C2">C2</button>
               </div>
             </div>
           </div>
@@ -2168,8 +2210,9 @@ function lexiconHtml(s) {
           <button class="listen" data-act="say" data-say="term" data-i="${i}" aria-label="Listen to ${esc(x.term)}"><i data-lucide="volume-2" class="w-3.5 h-3.5"></i>Listen</button>
         </div>
       </div>
+      ${bridgeHtml(x)}
       <p class="text-sm mt-2 leading-relaxed">${esc(x.definition)}</p>
-      ${famHtml(x)}${colHtml(x)}
+      ${gramHtml(x)}${famHtml(x)}${colHtml(x)}
       <p class="text-xs text-slate-500 mt-3 italic border-l-2 border-amber pl-2">${esc(x.context_usage)}</p>
       <div class="flex flex-wrap items-center justify-between gap-2 mt-3">
         <div class="flex flex-wrap gap-1.5">${(x.simpler_synonyms || []).map(y => `<span class="text-xs bg-amber-soft rounded-full px-2.5 py-0.5" style="color:var(--am-chip)">${esc(y)}</span>`).join('')}</div>
@@ -2263,11 +2306,13 @@ function paperHtml(s) {
       <div class="bento2 sec" data-sec="breakdown">
         <div class="card p-5 sm:p-6">
           <h3 class="font-bold flex items-center gap-2 mb-3"><i data-lucide="book-open-text" class="w-4 h-4 text-emerald"></i>Executive Technical Breakdown</h3>
-          <div class="flex flex-wrap items-center gap-2 mb-1 no-print"><div class="seg reg-seg" role="group" aria-label="Summary register"><button data-act="reg" data-reg="academic">Academic Register</button><button data-act="reg" data-reg="plain">Plain-English Intuition</button></div></div>
+          <div class="flex flex-wrap items-center gap-2 mb-1 no-print"><div class="seg reg-seg" role="group" aria-label="Summary language and register"><button data-act="reg" data-reg="academic">English (Deep Academic)</button><button data-act="reg" data-reg="plain">English (Intuition)</button><button data-act="reg" data-reg="ar" lang="ar">العربية (ملخص)</button><button data-act="reg" data-reg="fr" lang="fr">Français (Résumé)</button></div></div>
           <p class="reg-note no-print" data-el="reg-note"></p>
           ${briefHtml()}
           <div class="reg-pane prose-nx text-sm" data-reg="academic"><h4 class="print-only font-bold">Academic register</h4>${mdMath(d.summary)}</div>
           <div class="reg-pane prose-nx text-sm hidden" data-reg="plain"><h4 class="print-only font-bold">Plain-English intuition</h4>${mdMath(d.plain_english_summary || d.summary)}</div>
+          <div class="reg-pane prose-nx text-sm hidden rtl-pane" data-reg="ar" dir="rtl" lang="ar"><h4 class="print-only font-bold">العربية (ملخص)</h4>${d.arabic_summary ? mdMath(d.arabic_summary) : '<p class="bridge-miss">لا يتوفر ملخص عربي لهذا التحليل. أعد التحليل للحصول عليه.</p>'}</div>
+          <div class="reg-pane prose-nx text-sm hidden" data-reg="fr" lang="fr"><h4 class="print-only font-bold">Français (Résumé)</h4>${d.french_summary ? mdMath(d.french_summary) : '<p class="bridge-miss">Aucun résumé français pour cette analyse. Relancez l’analyse pour l’obtenir.</p>'}</div>
         </div>
         <div class="card p-5 sm:p-6">
           <h3 class="font-bold flex items-center gap-2 mb-4"><i data-lucide="list-ordered" class="w-4 h-4 text-emerald"></i>Step-by-Step Methodology</h3>
@@ -2323,10 +2368,18 @@ function paintReg() {
   const root = res('paper'), r = W.paper.reg;
   $$('.reg-pane', root).forEach(p => p.classList.toggle('hidden', p.dataset.reg !== r));
   $$('[data-act="reg"]', root).forEach(b => b.classList.toggle('active', b.dataset.reg === r));
-  const n = $('[data-el="reg-note"]', root);
-  if (n) n.textContent = r === 'academic' ? 'Formal wording as you would meet it in a paper or lecture.' : 'The same ideas in short, everyday sentences. Compare the two to learn how academic English says it.';
+  const n = $('[data-el="reg-note"]', root), bridge = r === 'ar' || r === 'fr';
+  if (n) n.textContent = { academic: 'Formal wording as you would meet it in a paper or lecture.', plain: 'The same ideas in short, everyday sentences. Compare the two to learn how academic English says it.',
+    ar: 'Comprehension bridge: the same summary in Arabic. Audio is English only, so switch to an English tab to listen.', fr: 'Comprehension bridge: the same summary in French. Audio is English only, so switch to an English tab to listen.' }[r] || '';
+  const br = $('.brief', root); if (br) br.classList.toggle('hidden', bridge);
 }
 function cefrBadge(l) { return l ? `<span class="cefr-badge ${esc(l)}" title="CEFR level">${esc(l)}</span>` : ''; }
+function bridgeHtml(x) {
+  const ar = (x.arabic_equivalent || '').trim(), fr = (x.french_equivalent || '').trim();
+  if (!ar && !fr) return '';
+  return `<div class="tr-row">${ar ? `<span class="tr-badge ar" title="Arabic equivalent"><b>AR</b><span dir="rtl" lang="ar">${esc(ar)}</span></span>` : ''}${fr ? `<span class="tr-badge fr" title="French equivalent"><b>FR</b><span lang="fr">${esc(fr)}</span></span>` : ''}</div>`;
+}
+function gramHtml(x) { const g = (x.grammar_usage_note || '').trim(); return g ? `<div class="gram-note"><i data-lucide="spell-check" class="w-3.5 h-3.5"></i><span><b>Grammar note.</b> ${esc(g)}</span></div>` : ''; }
 function famHtml(x) { return x.word_family ? `<div class="sub-l">Word family</div><div class="fam">${esc(x.word_family)}</div>` : ''; }
 function colHtml(x) { return (x.collocations || []).length ? `<div class="sub-l">Collocations</div><div class="flex flex-wrap gap-1.5">${x.collocations.map(c => `<span class="tag-col">${esc(c)}</span>`).join('')}</div>` : ''; }
 
@@ -2419,6 +2472,7 @@ function deckPaint(keepFlip) {
       <span class="mastered-badge ${mastered ? '' : 'hidden'}"><i data-lucide="check" class="w-3 h-3"></i>Mastered</span></div>
     <div class="face-term">${esc(t.term)}</div>
     <div class="text-center">${cefrBadge(t.cefr_level)}</div>
+    ${bridgeHtml(t) ? `<div class="face-tr">${bridgeHtml(t)}</div>` : ''}
     <div class="face-hint">Click the card or press Space to reveal the definition</div>
     <div class="face-actions">
       <button class="listen" data-act="deck-say" data-accent="en-US" aria-label="Hear ${esc(t.term)} in American English"><i data-lucide="volume-2" class="w-3.5 h-3.5"></i>US</button>
@@ -2427,8 +2481,9 @@ function deckPaint(keepFlip) {
   $('[data-el="back"]', root).innerHTML = `
     <div class="flex items-center justify-between mb-2"><span class="eyebrow">Definition</span>
       <span class="flex items-center gap-2">${cefrBadge(t.cefr_level)}<span class="font-mono text-xs text-amber">${esc(t.term)}</span></span></div>
-    <p class="text-sm leading-relaxed">${esc(t.definition)}</p>
-    ${famHtml(t)}${colHtml(t)}
+    ${bridgeHtml(t)}
+    <p class="text-sm leading-relaxed mt-2">${esc(t.definition)}</p>
+    ${gramHtml(t)}${famHtml(t)}${colHtml(t)}
     <p class="text-xs text-slate-400 mt-3 italic border-l-2 border-amber pl-2">${esc(t.context_usage)}</p>
     <div class="flex flex-wrap gap-1.5 mt-3">${(t.simpler_synonyms || []).map(y => `<span class="text-xs bg-amber-soft rounded-full px-2.5 py-0.5" style="color:var(--am-chip)">${esc(y)}</span>`).join('')}</div>
     <div class="mt-auto pt-3 flex justify-center"><button class="listen ctx" data-act="deck-say" data-sentence="1"><i data-lucide="volume-2" class="w-3.5 h-3.5"></i>Hear the sentence</button></div>`;
@@ -2795,7 +2850,7 @@ fetch('/api/health').then(r => r.json()).then(h => {
 /* =====================================================================
    Part 3: CEFR level, dashboard, English Proficiency Wing, boot
    ===================================================================== */
-const LEVELS = ['A2', 'B1', 'B2', 'C1'];
+const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 let cefr = LEVELS.includes(ls.get('nexascholar.cefr')) ? ls.get('nexascholar.cefr') : 'B2';
 const STATS_KEY = 'nexascholar.stats.v1';
 const stats = (function () { try { return { drills: 0, ...(JSON.parse(ls.get(STATS_KEY) || '{}')) }; } catch (e) { return { drills: 0 }; } })();
@@ -2952,7 +3007,9 @@ function lesHtml(r) {
     <div class="lesson-bar no-print fade-in">
       <button class="btn-primary" data-act="lesson-pdf"><i data-lucide="file-down" class="w-4 h-4"></i>Export Lesson PDF</button>
       <label class="chk"><input type="checkbox" id="pdf-key" checked><span>Include Answer Key in PDF</span></label>
+      <button class="btn-ghost lesson-eval" data-act="lesson-eval"><i data-lucide="badge-check" class="w-4 h-4"></i>Complete Lesson &amp; Evaluate</button>
     </div>
+    ${levelupHtml(r)}
     <div class="lab-interactive grid gap-4">
       <div class="card p-5 lab-sec"><div class="flex flex-wrap items-center gap-2 mb-1"><span class="cefr-badge ${esc(r.cefr_level || cefr)}">${esc(r.cefr_level || cefr)}</span><span class="eyebrow">Grammar &amp; ESP worksheet</span></div>
         <h3 class="text-xl" style="margin:.2rem 0 .4rem">${esc(r.title)}</h3>${r.objective ? `<p class="text-sm text-slate-400 leading-relaxed"><b class="text-ink">Objective.</b> ${esc(r.objective)}</p>` : ''}</div>
@@ -2993,6 +3050,50 @@ function handoutHtml(r) {
   </div>`;
 }
 
+/* ---------------- Level-Up progression ---------------- */
+function lessonStats() {
+  const r = L.level_lesson.result, a = L.level_lesson.answers, ex = (r && r.exercises) || {};
+  const mcq = ex.mcq || [], ec = ex.error_correction || [], st = ex.sentence_transformation || [], d = (r && r._done) || {};
+  const answered = mcq.filter((_, i) => a[i] != null).length, score = mcq.filter((q, i) => a[i] === q.answer_index).length;
+  const pct = mcq.length ? Math.round(score / mcq.length * 100) : 0;
+  const mcqDone = mcq.length > 0 && answered === mcq.length;
+  const exDone = ec.every((_, i) => d['ec' + i]) && st.every((_, i) => d['st' + i]);
+  return { mcq, answered, score, pct, mcqDone, exDone, pass: mcqDone && (pct >= 80 || exDone), all: mcqDone && exDone };
+}
+const nextLevel = l => LEVELS[LEVELS.indexOf(l) + 1] || null;
+function levelupHtml(r) {
+  const lv = r.cefr_level || cefr, nx = nextLevel(lv), on = !!r._lvlup;
+  return `<div id="levelup" class="levelup no-print ${on ? '' : 'hidden'}" role="status" aria-live="polite">
+    <div class="lu-ic" aria-hidden="true"><i data-lucide="trophy" class="w-6 h-6"></i></div>
+    <div class="lu-body min-w-0"><div class="lu-t" id="lu-title">${on ? luTitle(r._lvlup, lv, nx) : ''}</div>
+      <p class="lu-s">${nx ? `You have shown solid control of ${esc(lv)}. Promote your level to unlock a fresh ${esc(nx)} worksheet with harder structures.` : 'You have reached the top of the CEFR scale. Keep sharpening with another C2 lesson on a new topic.'}</p></div>
+    <button class="btn-primary lu-btn" data-act="promote">${nx ? `Promote to ${esc(nx)} <span aria-hidden="true">&uarr;</span>` : 'New C2 lesson'}</button>
+  </div>`;
+}
+function luTitle(pct, lv, nx) { return pct >= 80 ? (nx ? `Level cleared! ${pct}% on ${lv}` : `Mastery! ${pct}% on ${lv}`) : `Lesson complete! Every ${lv} exercise done`; }
+function levelCheck(manual) {
+  const r = L.level_lesson.result; if (!r) return;
+  const s = lessonStats(), box = $('#levelup');
+  if (s.pass) {
+    const first = !r._lvlup; r._lvlup = s.pct;
+    if (box) {
+      $('#lu-title').textContent = luTitle(s.pct, r.cefr_level || cefr, nextLevel(r.cefr_level || cefr));
+      box.classList.remove('hidden'); if (first) { box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
+      if (first || manual) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (first) toast('Level cleared! You can promote your CEFR level.', 'success', 5000);
+    return;
+  }
+  if (!manual) return;
+  if (!s.mcqDone) toast(`Answer all ${s.mcq.length} multiple-choice questions first (${s.mcq.length - s.answered} left).`, 'info', 4500);
+  else toast(`You scored ${s.pct}%. Reach 80% on the quiz, or finish every exercise correctly, to level up. Review the rules and try a new lesson.`, 'info', 7000);
+}
+function promote() {
+  const r = L.level_lesson.result, lv = (r && r.cefr_level) || cefr, nx = nextLevel(lv);
+  if (nx) { setCefr(nx); toast(`Level raised to ${nx} across the whole app.`, 'success', 4000); }
+  labRun();
+}
+
 function labPaintDrill() {
   const r = L.level_lesson.result, ans = L.level_lesson.answers, root = $('#res-lab');
   if (!r) return;
@@ -3009,6 +3110,7 @@ function labPaintDrill() {
   });
   const sc = $('#drill-score'); if (sc) sc.textContent = `Score: ${score} / ${mcq.length}`;
   if (mcq.length && done === mcq.length && !r._counted) { r._counted = true; stats.drills++; saveStats(); toast(`Multiple choice complete: ${score} of ${done} correct.`, 'success'); }
+  if (mcq.length && done === mcq.length) levelCheck(false);
 }
 function labAnswer(btn) {
   const qi = +btn.dataset.lq, a = L.level_lesson.answers;
@@ -3028,17 +3130,19 @@ function exShow(box, ok, html) {
   const fb = $('.ex-fb', box); fb.className = 'ex-fb ' + (ok === true ? 'ok' : ok === false ? 'no' : 'info'); fb.innerHTML = html;
   renderMath(fb);
 }
+function exDone(kind, i) { const r = L.level_lesson.result; r._done = r._done || {}; r._done[kind + i] = true; setTimeout(() => levelCheck(false), 0); }
 function exCheck(el) {
   const { item, kind, box } = exItem(el); if (!item) return;
   const typed = $('.ex-in', box).value, t = norm(typed);
   if (!t) return toast('Type your answer first, or use Reveal.', 'info', 2500);
   if (kind === 'ec') {
-    if (t === norm(item.corrected_sentence)) return exShow(box, true, '<b>Correct.</b> ' + esc(item.rule_applied));
+    if (t === norm(item.corrected_sentence)) return exDone(kind, el.dataset.i), exShow(box, true, '<b>Correct.</b> ' + esc(item.rule_applied));
     return exShow(box, false, '<b>Not quite.</b> Re-read the sentence for the rule you need, then try again or reveal the answer.');
   }
   const hasKw = item.keyword && new RegExp('(^|\\s)' + norm(item.keyword).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\s|$)').test(t);
-  if (t === norm(item.model_answer)) return exShow(box, true, '<b>Matches the model answer.</b>');
+  if (t === norm(item.model_answer)) return exDone(kind, el.dataset.i), exShow(box, true, '<b>Matches the model answer.</b>');
   if (!hasKw) return exShow(box, false, `<b>Use the keyword</b> <span class="kw">${esc(item.keyword)}</span> in your sentence.`);
+  exDone(kind, el.dataset.i);
   exShow(box, null, '<b>Keyword used.</b> Other correct versions exist, so compare yours with the model answer.');
 }
 function exReveal(el) {
@@ -3094,6 +3198,8 @@ function labAct(name, el, e) {
     case 'ex-check': return exCheck(el);
     case 'ex-reveal': return exReveal(el);
     case 'lesson-pdf': return exportLesson();
+    case 'lesson-eval': return levelCheck(true);
+    case 'promote': return promote();
   }
 }
 
