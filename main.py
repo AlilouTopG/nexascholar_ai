@@ -19,7 +19,8 @@ from dotenv import dotenv_values
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from pypdf import PdfReader
 from pypdf.errors import PyPdfError
@@ -147,7 +148,7 @@ def vision_model_name() -> str:
     return os.getenv("GROQ_VISION_MODEL", DEFAULT_VISION_MODEL).strip() or DEFAULT_VISION_MODEL
 
 
-app = FastAPI(title="NexaScholar AI", version="3.3.0")
+app = FastAPI(title="NexaScholar AI", version="3.4.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -1379,12 +1380,58 @@ def sources_meta(sources: List[Source]) -> List[dict]:
 # --------------------------------------------------------------------------- #
 
 
+STATIC_DIR = BASE_DIR / "static"
+STATIC_DIR.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+def _icon_href(name: str) -> str:
+    """Prefer the user's own static/logo.png for the favicon / apple-touch-icon when it exists."""
+    logo = STATIC_DIR / "logo.png"
+    if logo.is_file():
+        return f"/static/logo.png?v={int(logo.stat().st_mtime)}"
+    return f"/static/{name}"
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     page = BASE_DIR / "templates" / "index.html"
     if not page.exists():
         raise HTTPException(500, "templates/index.html is missing.")
-    return HTMLResponse(page.read_text(encoding="utf-8"))
+    html = page.read_text(encoding="utf-8")
+    logo = (STATIC_DIR / "logo.png").is_file()
+    html = html.replace("/static/favicon.svg", _icon_href("favicon.svg"))
+    html = html.replace('type="image/svg+xml"', 'type="image/png"') if logo else html
+    html = html.replace('rel="apple-touch-icon" href="/static/icon-192.png"', f'rel="apple-touch-icon" href="{_icon_href("icon-192.png")}"')
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/manifest.json")
+async def manifest():
+    f = STATIC_DIR / "manifest.json"
+    if not f.is_file():
+        raise HTTPException(404, "manifest.json is missing.")
+    return FileResponse(f, media_type="application/manifest+json", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/sw.js")
+async def service_worker():
+    f = STATIC_DIR / "sw.js"
+    if not f.is_file():
+        raise HTTPException(404, "sw.js is missing.")
+    return FileResponse(f, media_type="application/javascript",
+                        headers={"Service-Worker-Allowed": "/", "Cache-Control": "no-cache"})
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    logo = STATIC_DIR / "logo.png"
+    if logo.is_file():
+        return FileResponse(logo, media_type="image/png")
+    ico = STATIC_DIR / "favicon.ico"
+    if ico.is_file():
+        return FileResponse(ico, media_type="image/x-icon")
+    return Response(status_code=204)
 
 
 @app.get("/api/health")

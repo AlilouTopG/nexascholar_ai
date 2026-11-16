@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="NexaScholar AI">
+  <defs>
+    <linearGradient id="g" x1="160" y1="162" x2="352" y2="350" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#00E676"/><stop offset="1" stop-color="#38BDF8"/></linearGradient>
+    <radialGradient id="lift" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#103C46" stop-opacity=".55"/><stop offset="1" stop-color="#103C46" stop-opacity="0"/></radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#070B14"/>
+  <circle cx="256" cy="256" r="190" fill="url(#lift)"/>
+  <g filter="url(#glow)" stroke-linecap="round" fill="none" stroke-width="13">
+    <path d="M160 350V162" stroke="#00E676"/><path d="M352 162V350" stroke="#38BDF8"/><path d="M160 162L352 350" stroke="url(#g)"/>
+    <circle cx="160" cy="350" r="28" fill="#00E676" stroke="none"/><circle cx="160" cy="162" r="28" fill="#00E676" stroke="none"/>
+    <circle cx="352" cy="162" r="28" fill="#38BDF8" stroke="none"/><circle cx="352" cy="350" r="28" fill="#38BDF8" stroke="none"/>
+  </g>
+  <g fill="#ECFDF5"><circle cx="160" cy="350" r="9"/><circle cx="160" cy="162" r="9"/><circle cx="352" cy="162" r="9"/><circle cx="352" cy="350" r="9"/></g>
+</svg>

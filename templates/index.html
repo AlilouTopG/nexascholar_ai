@@ -2,10 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#070B14">
 <title>NexaScholar AI</title>
+<meta name="application-name" content="NexaScholar">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NexaScholar">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -665,6 +674,92 @@
   .brief-voice { max-width:11rem; }
   @media (prefers-reduced-motion: reduce) { .listen.loading::before { animation-duration:1.6s; } }
 
+  /* =====================================================================
+     v7: installable app + mobile portrait / landscape polish
+     ===================================================================== */
+  .is-off { display:none !important; }
+  #main-scroll { overflow-x:hidden; }
+  .card, .stat, .qa, .rule-card, .ex-item { min-width:0; }
+  .code-pre { overflow-x:auto; }
+  #topbar { padding-left:max(.75rem, env(safe-area-inset-left)); padding-right:max(.75rem, env(safe-area-inset-right)); padding-top:env(safe-area-inset-top); height:calc(4rem + env(safe-area-inset-top)); }
+  #sidebar { padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
+  #main-scroll > .ws-root:last-child { padding-bottom:env(safe-area-inset-bottom); }
+
+  @media (max-width:1023px) {
+    #sidebar { width:min(86vw, 320px); overflow-y:auto; overscroll-behavior:contain; }
+    #sidebar #nav { max-height:none; }
+    #sidebar #history-list { min-height:6rem; }
+  }
+
+  @media (max-width:768px) {
+    /* comfortable touch targets */
+    .btn-primary, .btn-ghost, .icon-btn, .seg button, .nav-i, .listen, .opt, .chip, .preset, .hist-open, .hist-del, .chip-x,
+    .lab-tabs button, .rail a, .chat-head, .brief-voice, .chk, .dropzone-btn, .qa, .mk-tag, .deck-nav button, .cefr-badge.btn { min-height:44px; }
+    .icon-btn, .hist-del, .chip-x, .deck-nav .icon-btn { min-width:44px; }
+    .seg button { padding-left:.85rem; padding-right:.85rem; }
+    .listen { padding:.45rem .85rem; }
+    .opt { padding-top:.7rem; padding-bottom:.7rem; }
+    .chk { padding:.35rem 0; }
+    #install-btn { padding-left:.8rem; padding-right:.8rem; }
+    textarea:not(#code-input), select, input[type="text"] { font-size:16px; }       /* stops iOS from zooming on focus */
+    .dash, .lab { padding:1rem .9rem 2.5rem; gap:1.1rem; }
+    .dash-hero h2 { font-size:1.55rem; }
+    .stat .v { font-size:1.65rem; }
+    .qa { min-height:7.5rem; }
+    .dg-viewport { height:min(440px, 58vh); }
+    .deck-stage { height:min(350px, 62vh); }
+    .face { padding:1.1rem 1.1rem; }
+    .brief { gap:.5rem; }
+    .brief .btn-primary { flex:1 1 calc(100% - 4.5rem); justify-content:center; }
+    .brief .eq { display:none !important; }
+    .brief-voice { flex:1 1 100%; max-width:none; }
+    .brief .seg { flex:1 1 auto; } .brief .seg button { flex:1; }
+    .lesson-bar { gap:.4rem 1rem; } .lesson-bar .btn-primary { flex:1 1 100%; justify-content:center; }
+    .formula-pill { font-size:.76rem; }
+    .chat-msgs { max-height:36vh; }
+    #toasts { left:.75rem; right:.75rem; width:auto; }
+    .lab-tabs { max-width:100%; }
+    h2.title-grad { font-size:1.4rem; }
+  }
+  @media (max-width:480px) {
+    #install-label { display:none; }
+    #model-chip, #cefr-chip { display:none !important; }
+    .stat-grid { gap:.6rem; } .stat { padding:.8rem .85rem; }
+    .stat .l { font-size:.7rem; }
+  }
+
+  /* phones held sideways (short viewport) */
+  @media (max-height:500px) and (orientation:landscape) {
+    #topbar { height:calc(3rem + env(safe-area-inset-top)); }
+    #sidebar { overflow-y:auto; } #sidebar #nav { max-height:none; }
+    .nav-h { padding-top:.5rem; padding-bottom:.2rem; }
+    .dash, .lab { padding-top:.75rem; padding-bottom:1.5rem; gap:.85rem; }
+    .dash-hero h2 { font-size:1.3rem; } .dash-hero p { display:none; }
+    .qa { min-height:0; flex-direction:row; flex-wrap:wrap; align-items:center; } .qa .d { display:none; } .qa .go { margin-top:0; margin-left:auto; } .qa .ic { margin-bottom:0; }
+    .stat-grid { grid-template-columns:repeat(4, minmax(0,1fr)); } .stat .v { font-size:1.4rem; margin-top:.3rem; } .stat .s { display:none; }
+    .qa-grid { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .dg-viewport { height:calc(100vh - 7.5rem); min-height:220px; }
+    .deck-stage { height:calc(100vh - 9rem); min-height:210px; max-width:560px; }
+    .face-term { font-size:1.5rem; } .face-hint { margin-bottom:.4rem; }
+    .chat-msgs { max-height:30vh; }
+    .rail { top:.2rem; }
+    .eyebrow { display:none; }
+    .mk { grid-template-columns:1fr 1fr; } .mk-why { grid-column:1 / -1; }
+  }
+  @media (hover:none) { .qa:hover, button.stat:hover { transform:none; } }
+
+  /* v7 fixes: grid items may shrink; every tappable control reaches 44px on touch screens */
+  @media (max-width:1279px) { .ws-grid { grid-template-columns:minmax(0,1fr); } }
+  .ws-grid > *, .lab-grid > *, .lab-out > *, .lab-sec, .stack > *, .bento2 > * { min-width:0; }
+  .conn, .seg-row, .mk > *, .expr { min-width:0; overflow-wrap:anywhere; }
+  .ed-bar > * { min-width:0; }
+  @media (max-width:768px) {
+    .ws-root button, .ws-root select, #topbar button { min-height:44px; }
+    .ws-root button[data-act="sample"], .ws-root button[data-act="toggle-paste"], .ws-root button[data-act="add-more"], .ws-root button[data-act="clear-files"], .ws-root button[data-act="reset-input"], .ws-root button[data-act="lab-sample"] { display:inline-flex; align-items:center; padding-left:.5rem; padding-right:.5rem; }
+    .ed-select { padding-top:.5rem; padding-bottom:.5rem; font-size:.8rem; }
+    .ws-root .ed-bar button, .ws-root .ed-foot button { min-width:44px; }
+  }
+
 </style>
 </head>
 <body>
@@ -712,6 +807,7 @@
       <button id="sb-toggle" class="icon-btn" aria-label="Toggle sidebar"><i data-lucide="panel-left" class="w-4 h-4"></i></button>
       <h1 id="view-title" class="text-sm sm:text-base font-extrabold tracking-tight truncate">Dashboard</h1>
       <span class="flex-1"></span>
+      <button id="install-btn" class="btn-ghost is-off" title="Install NexaScholar as an app"><i data-lucide="download" class="w-4 h-4"></i><span id="install-label">Install App</span></button>
       <button id="cefr-chip" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold border border-line rounded-full px-3 py-1 hover:border-amber transition" title="Target CEFR level (click to change)">
         <i data-lucide="target" class="w-3.5 h-3.5 text-amber"></i>Target <b id="cefr-chip-v" class="font-mono text-amber">B2</b>
       </button>
@@ -2866,6 +2962,27 @@ $('#nav').addEventListener('click', e => { const b = e.target.closest('[data-nav
 $('#cefr-chip').onclick = () => setCefr(LEVELS[(LEVELS.indexOf(cefr) + 1) % LEVELS.length]);
 $('#lab-input').addEventListener('input', e => { $('#lab-count').textContent = e.target.value.length.toLocaleString(); });
 $('#lab-input').addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); labRun(); } });
+
+/* ---------------- Installable app (PWA) ---------------- */
+const Install = { evt: null };
+const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function paintInstall() {
+  const show = !isStandalone() && (!!Install.evt || isIOS());
+  $('#install-btn').classList.toggle('is-off', !show);
+}
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); Install.evt = e; paintInstall(); });
+window.addEventListener('appinstalled', () => { Install.evt = null; paintInstall(); toast('NexaScholar was installed.', 'success'); });
+$('#install-btn').addEventListener('click', async () => {
+  if (Install.evt) {
+    const e = Install.evt; Install.evt = null; paintInstall();
+    try { await e.prompt(); await e.userChoice; } catch (err) { /* user dismissed */ }
+  } else if (isIOS()) toast('Tap Share → Add to Home Screen', 'info', 8000);
+});
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {}));
+}
+paintInstall();
 
 /* ---------------- Boot ---------------- */
 paintDomain();
