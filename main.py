@@ -92,6 +92,7 @@ ENV_FILE = _load_env_safe()
 # --------------------------------------------------------------------------- #
 
 MODEL = "openai/gpt-oss-120b"
+FALLBACK_MODEL = os.getenv("GROQ_FALLBACK_MODEL", "llama-3.3-70b-versatile").strip() or "llama-3.3-70b-versatile"
 KEY_PLACEHOLDER = "your_groq_api_key_here"
 DEFAULT_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
@@ -112,7 +113,7 @@ MAX_PDF_BYTES = 15 * 1024 * 1024        # per PDF
 MAX_IMAGE_BYTES = 12 * 1024 * 1024      # per uploaded image (re-compressed before vision)
 MAX_VISION_B64_BYTES = 3_300_000        # Groq caps base64 image payloads at ~4 MB
 MAX_TOTAL_UPLOAD = 45 * 1024 * 1024
-MAX_PROMPT_CHARS = _env_int("MAX_PROMPT_CHARS", 24_000)
+MAX_PROMPT_CHARS = _env_int("MAX_PROMPT_CHARS", 13_500)   # ~3,400 tokens of document: keeps prompt + output inside Groq free-tier TPM
 MIN_TEXT_CHARS = 80
 MAX_CODE_CHARS = 12_000
 MAX_LAB_CHARS = 4_000
@@ -125,12 +126,12 @@ TTS_VOICES = {
     "uk_female": "en-GB-SoniaNeural",
     "uk_male": "en-GB-RyanNeural",
 }
-MAX_JSON_TOKENS = _env_int("MAX_JSON_TOKENS", 8192)
+MAX_JSON_TOKENS = _env_int("MAX_JSON_TOKENS", 4096)
 MAX_JSON_ATTEMPTS = 3
 
 # Follow-up chat limits
 MAX_EXCERPT_CHARS = 9_000
-MAX_CHAT_CONTEXT = 16_000
+MAX_CHAT_CONTEXT = 11_000
 MAX_QUESTION_CHARS = 2_000
 MAX_HISTORY_TURNS = 8
 MAX_TURN_CHARS = 3_000
@@ -968,6 +969,24 @@ async def llm_create(client: groq.AsyncGroq, **kw):
         raise
 
 
+def _is_capacity_error(exc: Exception) -> bool:
+    """413 (request too large for the model's TPM) or 429 (rate limit)."""
+    return isinstance(exc, groq.APIStatusError) and exc.status_code in (413, 429)
+
+
+async def _create_chat_completion_with_fallback(client: groq.AsyncGroq, **kw):
+    """llm_create on the requested model; on 413 / 429 retry ONCE on FALLBACK_MODEL (higher token limits)."""
+    primary = kw.get("model") or MODEL
+    try:
+        return await llm_create(client, **{**kw, "model": primary})
+    except groq.APIStatusError as exc:
+        if not _is_capacity_error(exc) or primary == FALLBACK_MODEL:
+            raise
+        log.warning("%s returned %s; retrying once with %s.", primary, exc.status_code, FALLBACK_MODEL)
+        retry = {**kw, "model": FALLBACK_MODEL, "extra_body": {}}   # llama has no reasoning_effort
+        return await llm_create(client, **retry)
+
+
 def repair_latex_escapes(raw: str) -> str:
     """Double the backslash of LaTeX commands the model forgot to escape inside JSON strings.
 
@@ -1064,7 +1083,7 @@ async def run_llm_json(system: str, prompt: str, schema: type[BaseModel]) -> Bas
     for attempt in range(1, MAX_JSON_ATTEMPTS + 1):
         raw = ""
         try:
-            resp = await llm_create(
+            resp = await _create_chat_completion_with_fallback(
                 client,
                 model=MODEL,
                 messages=messages,
@@ -1140,7 +1159,7 @@ async def open_chat_stream(system: str, turns: List[dict]):
     """Open the Groq stream up-front so connection/auth errors become normal HTTP errors."""
     client = get_client()
     try:
-        return await llm_create(
+        return await _create_chat_completion_with_fallback(
             client,
             model=MODEL,
             messages=[{"role": "system", "content": system}] + turns,
@@ -1392,15 +1411,29 @@ async def collect_sources(uploads: List[tuple], pasted: Optional[str], kind: str
     return sources, warnings
 
 
+MIDDLE_MARK = "\n...[middle section condensed]...\n"
+
+
+def balanced_slice(text: str, limit: int, head: float = 0.65) -> str:
+    """Keep the first 65% and the last 35% of the allowance so a lecture's conclusion and closing formulas survive."""
+    if len(text) <= limit:
+        return text
+    room = max(0, limit - len(MIDDLE_MARK))
+    n_head = int(room * head)
+    n_tail = room - n_head
+    tail = text[len(text) - n_tail:] if n_tail > 0 else ""
+    return text[:n_head].rstrip() + MIDDLE_MARK + tail.lstrip()
+
+
 def allocate_budget(sources: List[Source], budget: int) -> bool:
-    """Trim sources proportionally so the total fits the budget. Returns True if anything was cut."""
+    """Fit the sources into the budget (each keeps its share, first 65% + last 35%). True if anything was cut."""
     total = sum(len(s.text) for s in sources)
     if total <= budget:
         return False
     for s in sources:
         share = max(600, int(budget * len(s.text) / total))
         if len(s.text) > share:
-            s.text = s.text[:share].rstrip() + "\n[...truncated...]"
+            s.text = balanced_slice(s.text, share)
     return True
 
 
