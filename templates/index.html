@@ -2181,48 +2181,90 @@ function resetInput(ws) {
 /* =====================================================================
    Network
    ===================================================================== */
-async function postJSON(url, init) {
-  let r;
-  try { r = await fetch(url, init); }
-  catch (e) { throw new Error('Cannot reach the server. Is it running?'); }
-  let data = null;
-  try { data = await r.json(); } catch (e) { /* non-JSON */ }
-  if (!r.ok) throw new Error((data && data.detail) || 'Request failed (' + r.status + ').');
-  return data;
+/* Every /api/* call runs under one AbortController: after API_TIMEOUT ms the request is cancelled and the
+   UI gets a clear, actionable error instead of spinning forever. A caller signal (Stop button) is chained. */
+const API_TIMEOUT = 55000;
+class ApiTimeout extends Error {}
+function apiCtl(ms, outer) {
+  const ctrl = new AbortController(); let timedOut = false;
+  const kill = () => ctrl.abort();
+  let timer = setTimeout(() => { timedOut = true; kill(); }, ms);
+  if (outer) { if (outer.aborted) kill(); else outer.addEventListener('abort', kill, { once: true }); }
+  return {
+    signal: ctrl.signal,
+    get timedOut() { return timedOut; },
+    bump() { clearTimeout(timer); timer = setTimeout(() => { timedOut = true; kill(); }, ms); },
+    done() { clearTimeout(timer); if (outer) outer.removeEventListener('abort', kill); },
+  };
+}
+const TIMEOUT_MSG = 'This is taking too long (over ' + (API_TIMEOUT / 1000) + ' seconds). The AI service may be busy. Try again, upload a smaller file, or paste fewer pages.';
+function httpMsg(status, detail) {
+  if (detail) return detail;
+  if (status === 413) return 'That upload is too large. Use a smaller file or paste fewer pages.';
+  if (status === 429) return 'The AI service is rate-limited right now. Wait a few seconds and try again.';
+  if (status === 502 || status === 503 || status === 504) return 'The server timed out or is restarting (HTTP ' + status + '). Wait a moment and try again.';
+  return 'Request failed (HTTP ' + status + '). Please try again.';
+}
+async function postJSON(url, init, ms) {
+  const c = apiCtl(ms || API_TIMEOUT, init && init.signal);
+  try {
+    let r;
+    try { r = await fetch(url, Object.assign({}, init, { signal: c.signal })); }
+    catch (e) {
+      if (c.timedOut) throw new ApiTimeout(TIMEOUT_MSG);
+      if (e.name === 'AbortError') throw e;
+      throw new Error('Cannot reach the server. Check your connection, or that the server is running.');
+    }
+    let data = null;
+    try { data = await r.json(); }
+    catch (e) { if (c.timedOut) throw new ApiTimeout(TIMEOUT_MSG); /* non-JSON body */ }
+    if (!r.ok) throw new Error(httpMsg(r.status, data && typeof data.detail === 'string' ? data.detail : ''));
+    if (data === null) throw new Error('The server sent an unreadable response. Please try again.');
+    return data;
+  } finally { c.done(); }
 }
 
 /* Reads the /api/chat Server-Sent Events stream and calls onToken for every token. */
 async function streamChat(body, signal, onToken) {
-  let r;
+  const c = apiCtl(API_TIMEOUT, signal);               // 55 s to first byte, then 55 s of silence = stalled
+  const stalled = () => new ApiTimeout('The answer stalled for ' + (API_TIMEOUT / 1000) + ' seconds. Try asking again, or ask a shorter question.');
   try {
-    r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal });
-  } catch (e) {
-    if (e.name === 'AbortError') throw e;
-    throw new Error('Cannot reach the server. Is it running?');
-  }
-  if (!r.ok) {
-    let d = null; try { d = await r.json(); } catch (e) { /* ignore */ }
-    throw new Error((d && d.detail) || 'Request failed (' + r.status + ').');
-  }
-  const reader = r.body.getReader(), dec = new TextDecoder();
-  let buf = '';
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) return;
-    buf += dec.decode(value, { stream: true });
-    let i;
-    while ((i = buf.indexOf('\n\n')) !== -1) {
-      const evt = buf.slice(0, i); buf = buf.slice(i + 2);
-      for (const line of evt.split('\n')) {
-        if (!line.startsWith('data:')) continue;
-        const data = line.slice(5).trim();
-        if (data === '[DONE]') return;
-        let j; try { j = JSON.parse(data); } catch (e) { continue; }
-        if (j.error) throw new Error(j.error);
-        if (j.token) onToken(j.token);
+    let r;
+    try {
+      r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: c.signal });
+    } catch (e) {
+      if (c.timedOut) throw stalled();
+      if (e.name === 'AbortError') throw e;
+      throw new Error('Cannot reach the server. Check your connection, or that the server is running.');
+    }
+    if (!r.ok) {
+      let d = null; try { d = await r.json(); } catch (e) { /* ignore */ }
+      throw new Error(httpMsg(r.status, d && typeof d.detail === 'string' ? d.detail : ''));
+    }
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      let chunk;
+      try { chunk = await reader.read(); }
+      catch (e) { if (c.timedOut) throw stalled(); throw e; }
+      const { value, done } = chunk;
+      if (done) return;
+      c.bump();
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n\n')) !== -1) {
+        const evt = buf.slice(0, i); buf = buf.slice(i + 2);
+        for (const line of evt.split('\n')) {
+          if (!line.startsWith('data:')) continue;
+          const data = line.slice(5).trim();
+          if (data === '[DONE]') return;
+          let j; try { j = JSON.parse(data); } catch (e) { continue; }
+          if (j.error) throw new Error(j.error);
+          if (j.token) onToken(j.token);
+        }
       }
     }
-  }
+  } finally { c.done(); }
 }
 
 /* =====================================================================
@@ -2243,8 +2285,13 @@ function showSkeleton(ws, messages) {
       <div class="card p-6"><div class="sk h-52 w-full"></div></div>
       <div class="grid sm:grid-cols-2 gap-4"><div class="card p-5"><div class="sk h-20 w-full"></div></div><div class="card p-5"><div class="sk h-20 w-full"></div></div></div>
     </div>`;
-  let i = 0;
-  W[ws].tick = setInterval(() => { i = (i + 1) % messages.length; const el = $('[data-el="sk-status"]', res(ws)); if (el) el.textContent = messages[i]; }, 2600);
+  let i = 0; const t0 = Date.now();
+  W[ws].tick = setInterval(() => {
+    const el = $('[data-el="sk-status"]', res(ws)); if (!el) return;
+    if (i < messages.length - 1) i++;                    // step through in order, then hold on the last step
+    const sec = Math.round((Date.now() - t0) / 1000);
+    el.textContent = messages[i] + (sec >= 15 ? ' (' + sec + 's, large documents can take up to 45 s)' : '');
+  }, 2600);
   if (state.ws === ws) { const r = res(ws).getBoundingClientRect(); if (r.top < 0 || r.top > window.innerHeight * 0.6) res(ws).scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
 
@@ -2782,7 +2829,7 @@ async function withBusy(ws, label, messages, job) {
   abortChat(ws); if (ws === 'paper') Brief.stop();
   showSkeleton(ws, messages);
   try { await job(); }
-  catch (e) { toast(e.message, 'error', 9000); renderWorkspace(ws); }
+  catch (e) { if (e && e.name === 'AbortError') toast('Cancelled.', 'info'); else toast((e && e.message) || 'Something went wrong. Please try again.', 'error', 10000); try { renderWorkspace(ws); } catch (_) { renderEmpty(ws); } }
   finally { w.busy = false; btn.disabled = false; btn.innerHTML = html; icons(); }
 }
 function addSession(ws, s) {
@@ -2803,9 +2850,9 @@ async function runPaper() {
   fd.append('domain', W.paper.domain);
   const hasImg = w.files.some(f => fileKind(f.name) === 'image');
   const label = w.files.length ? (w.files.length === 1 ? w.files[0].name : w.files.length + ' files') + (text ? ' + pasted text' : '') : 'Pasted text';
-  const msgs = ['Reading your sources...'];
+  const msgs = ['Extracting document text...'];
   if (hasImg) msgs.push('Transcribing images with vision AI...');
-  msgs.push('Synthesizing theory and exercises...', 'Mapping the architecture...', 'Building the diagram...', 'Writing the lexicon...', 'Drafting the mastery check...');
+  msgs.push('Generating structured analysis...', 'Writing summaries, formulas and the mastery check...', 'Almost there, validating the result...');
   await withBusy('paper', 'Analyzing...', msgs, async () => {
     const d = await postJSON('/api/analyze', { method: 'POST', body: fd });
     const { context, ...data } = d;
@@ -2827,7 +2874,7 @@ async function runCode() {
   const label = [lines ? lines + (lines === 1 ? ' line' : ' lines') : '', w.files.length ? w.files.length + (w.files.length === 1 ? ' screenshot' : ' screenshots') : ''].filter(Boolean).join(' + ');
   const msgs = ['Reading the code...'];
   if (w.files.length) msgs.push('Transcribing the screenshot with vision AI...');
-  msgs.push('Tracing the control flow...', 'Hunting edge cases...', 'Drawing the flowchart...', 'Writing explanations...');
+  msgs.push('Generating structured analysis...', 'Writing explanations and the flowchart...', 'Almost there, validating the result...');
   await withBusy('code', 'Explaining...', msgs, async () => {
     const d = await postJSON('/api/explain-code', { method: 'POST', body: fd });
     const { context, ...data } = d;
@@ -2996,7 +3043,7 @@ $('#presets').innerHTML = PRESETS.map(p => `<button type="button" class="preset"
 edRefresh();
 renderChips('paper'); renderChips('code');
 renderEmpty('paper'); renderEmpty('code');
-fetch('/api/health').then(r => r.json()).then(h => {
+Promise.race([fetch('/api/health'), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), API_TIMEOUT))]).then(r => r.json()).then(h => {
   if (h.model) { $('#model-name').textContent = h.model; $('#model-chip').title = 'Language model: ' + h.model + (h.vision_model ? ' · Vision: ' + h.vision_model : ''); }
   if (!h.api_key_configured) toast('GROQ_API_KEY is not configured. Copy .env.example to .env, add your key, then restart the server.', 'error', 10000);
 }).catch(() => {});
