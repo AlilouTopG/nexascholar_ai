@@ -93,6 +93,18 @@ ENV_FILE = _load_env_safe()
 
 MODEL = "openai/gpt-oss-120b"
 FALLBACK_MODEL = os.getenv("GROQ_FALLBACK_MODEL", "llama-3.3-70b-versatile").strip() or "llama-3.3-70b-versatile"
+# Fast primary model for the structured-JSON endpoints (/api/analyze, /api/explain-code, /api/english-lab).
+# llama-3.3-70b-versatile writes JSON several times faster than the gpt-oss reasoning model and has higher
+# free-tier limits. Set ANALYZE_MODEL=openai/gpt-oss-120b in .env to switch back; MODEL stays the secondary.
+FAST_MODEL = "llama-3.3-70b-versatile"
+ANALYZE_MODEL = os.getenv("ANALYZE_MODEL", FAST_MODEL).strip() or FAST_MODEL
+GROQ_TIMEOUT = 45.0          # hard per-request timeout on the Groq client: a stalled call can never hang
+REQUEST_DEADLINE = 50.0      # total budget for one JSON endpoint (Render's gateway gives up at 60 s)
+PDF_TIMEOUT = 25.0           # PDF text extraction budget
+VISION_BUDGET = 40.0         # total budget for transcribing all uploaded images
+PDF_FULL_PAGES = 40          # longer PDFs: read the first and last pages only (conclusions matter, the middle is condensed)
+SCANNED_PDF_MSG = ("This PDF appears to be a scanned image with no selectable text. "
+                   "Please upload a screenshot/photo of the page or paste the text directly.")
 KEY_PLACEHOLDER = "your_groq_api_key_here"
 DEFAULT_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
@@ -685,14 +697,10 @@ Because your reply is JSON, EVERY backslash inside a JSON string must be doubled
 """
 
 RIGOR_RULES = r"""
-STEP-BY-STEP RIGOR: when the material or question involves a complex mathematical derivation, an
-engineering or physics problem, an algorithm with tricky edge cases, or any multi-step solution, never
-give a brief summary of the result. Write out the COMPLETE derivation or solution in numbered steps: (1)
-state what is given and what must be found, (2) name the law, theorem or rule used at each step and WHY it
-applies (check its conditions), (3) show every intermediate algebraic or logical line without skipping
-steps, (4) track units and signs, (5) state the final result and verify it (a limiting case, a unit check
-or a quick substitution). For algorithms, trace a concrete input line by line and justify each edge case.
-Simple factual or vocabulary questions still get short answers; depth is for genuinely complex problems.
+STEP-BY-STEP RIGOR: for a complex derivation, engineering/physics problem, algorithm edge case or multi-step
+question, write the COMPLETE solution in numbered steps: given/unknown, the law or theorem used at each step
+and why it applies, every intermediate line, units and signs, then the result with a quick check. Simple
+or vocabulary questions stay short.
 """
 
 FORMULA_ORDER_RULES = r"""
@@ -847,9 +855,8 @@ PAPER_SYSTEM = (
     + MATH_RULES
     + FORMULA_ORDER_RULES
     + RIGOR_RULES
-    + "\nIn this task apply the rigor rules to `methodology_steps` (each step states the action AND its "
-    "justification, including intermediate results, not just a label) and to every quiz `explanation` "
-    "(show the working that leads to the correct option and say why each distractor fails).\n"
+    + "\nApply this inside the JSON, but stay compact: each `methodology_steps` item gives the action and its "
+    "justification in one or two sentences; each quiz `explanation` shows the key working in 1-3 sentences.\n"
     + PAPER_JSON_SPEC
     + MERMAID_RULES
 )
@@ -866,10 +873,9 @@ CODE_SYSTEM = (
     "explanations: state definitions first, then the governing recurrence or law, then special cases and "
     "boundary conditions, each in clean LaTeX.\n"
     + RIGOR_RULES
-    + "\nIn this task apply the rigor rules to the line-by-line `explanation` fields (what the line does, "
-    "why it is written that way, and the value of the key variables after it runs on a small concrete "
-    "input), to `complexity` (derive the time and space bounds step by step from the loops and recursion, "
-    "do not only state them) and to `edge_cases` (give the failing input and what happens).\n"
+    + "\nApply this inside the JSON, but stay compact: line-by-line `explanation` fields say what the line does "
+    "and why in 1-2 sentences, `complexity` derives the bounds briefly from the loops, `edge_cases` name the "
+    "failing input.\n"
     + CODE_JSON_SPEC
     + MERMAID_RULES
 )
@@ -1023,7 +1029,7 @@ def get_client() -> groq.AsyncGroq:
             "(get one at https://console.groq.com/keys), then restart the server.",
         )
     if _client is None:
-        _client = groq.AsyncGroq(api_key=key, timeout=90.0)
+        _client = groq.AsyncGroq(api_key=key, timeout=GROQ_TIMEOUT, max_retries=0)
     return _client
 
 
@@ -1057,7 +1063,10 @@ def groq_http_error(exc: Exception) -> HTTPException:
             detail += " Try fewer or shorter sources."
         return HTTPException(status, detail)
     if isinstance(exc, groq.APITimeoutError):
-        return HTTPException(502, "Groq request timed out. Please try again.")
+        return HTTPException(
+            504, f"The AI service did not answer within {int(GROQ_TIMEOUT)} seconds. Please try again, or use a shorter "
+            "document (paste only the chapters you need)."
+        )
     if isinstance(exc, groq.APIConnectionError):
         cause = getattr(exc, "__cause__", None)
         return HTTPException(502, "Could not reach Groq: " + _squash(cause or exc))
@@ -1066,7 +1075,8 @@ def groq_http_error(exc: Exception) -> HTTPException:
 
 async def llm_create(client: groq.AsyncGroq, **kw):
     """chat.completions.create with reasoning_effort sent via extra_body; drops it if the model rejects it."""
-    kw.setdefault("extra_body", {"reasoning_effort": REASONING_EFFORT})
+    if "gpt-oss" in str(kw.get("model", "")):
+        kw.setdefault("extra_body", {"reasoning_effort": REASONING_EFFORT})   # only the reasoning model understands it
     try:
         return await client.chat.completions.create(**kw)
     except groq.BadRequestError as exc:
@@ -1086,13 +1096,15 @@ def _is_capacity_error(exc: Exception) -> bool:
 async def _create_chat_completion_with_fallback(client: groq.AsyncGroq, **kw):
     """llm_create on the requested model; on 413 / 429 retry ONCE on FALLBACK_MODEL (higher token limits)."""
     primary = kw.get("model") or MODEL
+    secondary = FALLBACK_MODEL if primary == MODEL else MODEL      # llama <-> gpt-oss: each has its own quota
     try:
         return await llm_create(client, **{**kw, "model": primary})
     except groq.APIStatusError as exc:
-        if not _is_capacity_error(exc) or primary == FALLBACK_MODEL:
+        if not _is_capacity_error(exc) or primary == secondary:
             raise
-        log.warning("%s returned %s; retrying once with %s.", primary, exc.status_code, FALLBACK_MODEL)
-        retry = {**kw, "model": FALLBACK_MODEL, "extra_body": {}}   # llama has no reasoning_effort
+        log.warning("%s returned %s; retrying once with %s.", primary, exc.status_code, secondary)
+        retry = {k: v for k, v in kw.items() if k != "extra_body"}
+        retry["model"] = secondary
         return await llm_create(client, **retry)
 
 
@@ -1183,18 +1195,27 @@ def describe_validation(exc: Exception) -> str:
     return str(exc)
 
 
-async def run_llm_json(system: str, prompt: str, schema: type[BaseModel]) -> BaseModel:
+async def run_llm_json(system: str, prompt: str, schema: type[BaseModel], model: Optional[str] = None) -> BaseModel:
     """Call Groq in JSON mode, validate with Pydantic, and feed errors back for up to 3 attempts."""
     client = get_client()
     messages = [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
     last_reason = "unknown error"
+    model = model or ANALYZE_MODEL
+    started = asyncio.get_running_loop().time()
 
     for attempt in range(1, MAX_JSON_ATTEMPTS + 1):
         raw = ""
+        remaining = REQUEST_DEADLINE - (asyncio.get_running_loop().time() - started)
+        if remaining < 6:
+            raise HTTPException(
+                504, "The analysis is taking too long. Please try again, or use a shorter document "
+                "(paste only the chapters you need)."
+            )
         try:
             resp = await _create_chat_completion_with_fallback(
                 client,
-                model=MODEL,
+                model=model,
+                timeout=min(GROQ_TIMEOUT, remaining),
                 messages=messages,
                 response_format={"type": "json_object"},
                 temperature=0.3,
@@ -1419,7 +1440,8 @@ async def vision_transcribe(client: groq.AsyncGroq, data: bytes, filename: str, 
 # --------------------------------------------------------------------------- #
 
 
-def extract_pdf_text(data: bytes) -> str:
+def extract_pdf_text(data: bytes, budget: Optional[int] = None) -> str:
+    budget = budget or MAX_PROMPT_CHARS
     try:
         reader = PdfReader(io.BytesIO(data))
         if reader.is_encrypted:
@@ -1430,13 +1452,27 @@ def extract_pdf_text(data: bytes) -> str:
                 raise
             except Exception:
                 raise HTTPException(400, "This PDF is encrypted and cannot be read.")
-        pages = []
-        for page in reader.pages:
+        n = len(reader.pages)
+
+        def grab(i: int) -> str:
             try:
-                pages.append(page.extract_text() or "")
+                return reader.pages[i].extract_text() or ""
             except Exception:  # a single bad page should not kill the job
-                continue
-        text = "\n".join(pages)
+                return ""
+
+        if n <= PDF_FULL_PAGES:
+            text = "\n".join(grab(i) for i in range(n))
+        else:
+            # Long course PDF: read from the front until the prompt budget is covered, then from the back
+            # (conclusions, summaries, closing formulas). The middle is skipped, which keeps extraction fast.
+            head, tail, hc, tc, front, back = [], [], 0, 0, 0, n
+            while front < n and hc < budget:
+                t = grab(front); head.append(t); hc += len(t); front += 1
+            while back > front and tc < budget // 2:
+                back -= 1
+                t = grab(back); tail.insert(0, t); tc += len(t)
+            gap = f"\n[... pages {front + 1}-{back} of {n} not read for speed ...]\n" if back > front else "\n"
+            text = "\n".join(head) + gap + "\n".join(tail)
     except HTTPException:
         raise
     except (PyPdfError, Exception) as exc:
@@ -1473,6 +1509,7 @@ async def collect_sources(uploads: List[tuple], pasted: Optional[str], kind: str
     sources: List[Source] = []
     warnings: List[str] = []
     image_jobs: List[tuple] = []
+    scanned: List[str] = []
 
     for name, data in uploads:
         ext = Path(name).suffix.lower()
@@ -1483,10 +1520,20 @@ async def collect_sources(uploads: List[tuple], pasted: Optional[str], kind: str
                 raise HTTPException(413, f"{name} is too large. Maximum PDF size is 15 MB.")
             if not data.startswith(b"%PDF"):
                 raise HTTPException(400, f"{name} does not look like a valid PDF.")
-            text = await asyncio.to_thread(extract_pdf_text, data)
-            if len(text) < MIN_TEXT_CHARS:
-                warnings.append(f"{name}: no readable text found (scanned PDF?). Upload page photos as images instead.")
+            try:
+                text = await asyncio.wait_for(asyncio.to_thread(extract_pdf_text, data), timeout=PDF_TIMEOUT)
+            except asyncio.TimeoutError:
+                raise HTTPException(
+                    504, f"{name} took too long to read. Try a smaller PDF, or paste the text of the chapters you need."
+                )
+            if len(text.strip()) < 40:               # empty / near-empty: a scanned image PDF
+                scanned.append(name)
                 continue
+            if len(text) < MIN_TEXT_CHARS:
+                warnings.append(f"{name}: almost no readable text found. Upload page photos as images instead.")
+                continue
+            if "not read for speed" in text:
+                warnings.append(f"{name}: long PDF. The first and last pages were read; the middle was skipped for speed.")
             sources.append(Source(name, "pdf", text))
         elif ext in IMAGE_EXTS:
             if len(data) > MAX_IMAGE_BYTES:
@@ -1500,6 +1547,11 @@ async def collect_sources(uploads: List[tuple], pasted: Optional[str], kind: str
             allowed = "PNG, JPG, JPEG, WEBP" if kind == "code" else "PDF, PNG, JPG, JPEG, WEBP, TXT, MD"
             raise HTTPException(400, f"Unsupported file type: {name}. Supported: {allowed}.")
 
+    if scanned and not sources and not image_jobs and not (pasted and pasted.strip()):
+        raise HTTPException(400, SCANNED_PDF_MSG)            # fail fast: nothing to send to the model
+    for name in scanned:
+        warnings.append(f"{name}: " + SCANNED_PDF_MSG)
+
     if image_jobs:
         client = client_factory()
         sem = asyncio.Semaphore(2)
@@ -1509,7 +1561,11 @@ async def collect_sources(uploads: List[tuple], pasted: Optional[str], kind: str
                 text = await vision_transcribe(client, data, name, kind)
             return Source(name, "image", text)
 
-        for src in await asyncio.gather(*(run(n, d) for n, d in image_jobs)):
+        try:
+            transcribed = await asyncio.wait_for(asyncio.gather(*(run(n, d) for n, d in image_jobs)), timeout=VISION_BUDGET)
+        except asyncio.TimeoutError:
+            raise HTTPException(504, "Reading the images took too long. Try fewer or smaller images, or paste the text.")
+        for src in transcribed:
             if len(src.text.strip()) < 5:
                 warnings.append(f"{src.name}: nothing could be transcribed from this image.")
             else:
@@ -1517,6 +1573,8 @@ async def collect_sources(uploads: List[tuple], pasted: Optional[str], kind: str
 
     if pasted and pasted.strip():
         sources.append(Source("Pasted text", "pasted", pasted.strip()))
+    if scanned and not sources:
+        raise HTTPException(400, SCANNED_PDF_MSG)
     return sources, warnings
 
 
@@ -1624,7 +1682,7 @@ async def index():
     page = BASE_DIR / "templates" / "index.html"
     if not page.exists():
         raise HTTPException(500, "templates/index.html is missing.")
-    html = page.read_text(encoding="utf-8")
+    html = await asyncio.to_thread(page.read_text, encoding="utf-8")     # never block the event loop on disk I/O
     logo = (STATIC_DIR / "logo.png").is_file()
     html = html.replace("/static/favicon.svg", _icon_href("favicon.svg"))
     html = html.replace('type="image/svg+xml"', 'type="image/png"') if logo else html
