@@ -900,6 +900,33 @@ body.modal-open #main-scroll { overflow:hidden; }
 body.print-lesson .levelup { display:none !important; }
 .brief.hidden { display:none !important; }
 
+/* =====================================================================
+   v10  Ordered Laws & Formula Sheet
+   ===================================================================== */
+.fx-list { display:grid; gap:.85rem; counter-reset:fx; }
+.fx-item { min-width:0; padding:.9rem 1rem 1rem; border-radius:1rem; border:1px solid var(--line); background:var(--fill); position:relative; }
+.fx-item::before { content:''; position:absolute; left:0; top:.9rem; bottom:.9rem; width:3px; border-radius:3px; background:linear-gradient(180deg,#34D399,#38BDF8); box-shadow:0 0 14px var(--em-glow); }
+.fx-head { display:flex; align-items:center; gap:.6rem; min-width:0; }
+.fx-n { flex:none; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:.72rem; padding:.2rem .55rem; border-radius:999px; color:#052018; background:linear-gradient(135deg,#34D399,#10B981); }
+.fx-name { margin:0; font-weight:700; font-size:.95rem; color:var(--text-h); overflow-wrap:anywhere; min-width:0; }
+.fx-eq { margin-top:.7rem; padding:.55rem .75rem; border-radius:.8rem; border:1px solid var(--line-strong); background:rgba(4,8,18,.55); text-align:center; max-width:100%; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; font-size:1.02rem; color:var(--text-h); }
+.fx-eq .katex-display { margin:.15rem 0; padding:.2rem 0; overflow:visible; max-width:none; }
+.fx-eq:focus-visible { outline:2px solid var(--em-t); outline-offset:2px; }
+.fx-legend { margin-top:.6rem; font-size:.82rem; line-height:1.6; color:var(--text-b); }
+.fx-legend p { margin:0; }
+.fx-when { display:flex; flex-wrap:wrap; align-items:baseline; gap:.45rem; margin-top:.55rem; font-size:.8rem; color:var(--muted); }
+.fx-tag { font-family:'JetBrains Mono',monospace; font-size:.62rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:.15rem .5rem; border-radius:999px; border:1px solid rgba(251,191,36,.4); color:var(--am-t); background:var(--am-soft); flex:none; }
+.fx-when-t { min-width:0; overflow-wrap:anywhere; }
+@media print {
+  .fx-card { break-inside:auto; }
+  .fx-item { break-inside:avoid; background:#fff !important; border:1px solid #CBD5E1 !important; margin-top:8pt; }
+  .fx-item::before { background:#047857 !important; }
+  .fx-n { background:#047857 !important; color:#fff !important; }
+  .fx-eq { background:#F8FAFC !important; border:1px solid #CBD5E1 !important; overflow:visible !important; max-width:none !important; }
+  .fx-eq .katex-display { overflow:visible !important; }
+  .fx-tag { background:#FEF3C7 !important; color:#92400E !important; border-color:#FCD34D !important; }
+}
+
 </style>
 </head>
 <body>
@@ -2297,11 +2324,28 @@ function chatDrawer(ws, s) {
     </div>`;
 }
 
+function formulaSheetHtml(d) {
+  const fx = (d.ordered_formulas || []).filter(f => f && f.latex_formula);
+  if (!fx.length) return '';
+  const wrap = t => { t = String(t || '').trim(); return /^(\$\$|\\\[)/.test(t) ? t : '$$' + t.replace(/^\$|\$$/g, '') + '$$'; };
+  const items = fx.map((f, i) => `
+    <article class="fx-item">
+      <header class="fx-head"><span class="fx-n" aria-label="Formula ${i + 1}">#${i + 1}</span><h4 class="fx-name">${esc(String(f.name || '').replace(/^\s*#?\d+\s*[.):\-]\s*/, ''))}</h4></header>
+      <div class="fx-eq" tabindex="0" role="group" aria-label="Equation ${i + 1}">${esc(wrap(f.latex_formula))}</div>
+      ${f.variables_legend ? `<div class="fx-legend prose-nx">${mdMath(f.variables_legend)}</div>` : ''}
+      ${f.when_to_use ? `<div class="fx-when"><span class="fx-tag">When to use</span><span class="fx-when-t">${mdMath(f.when_to_use).replace(/^<p>|<\/p>\s*$/g, '')}</span></div>` : ''}
+    </article>`).join('');
+  return `<div class="card fx-card p-5 sm:p-6 sec" data-sec="formulas">
+    <h3 class="font-bold flex items-center gap-2 mb-1"><i data-lucide="sigma" class="w-4 h-4 text-emerald"></i>Ordered Laws &amp; Formula Sheet</h3>
+    <p class="text-xs text-slate-400 mb-4">Definitions first, then the governing laws, then special cases and boundary conditions.</p>
+    <div class="fx-list">${items}</div>
+  </div>`;
+}
 function paperHtml(s) {
   const d = s.data;
   const steps = (d.methodology_steps || []).map((t, i) => `<li><span class="step-n">${i + 1}</span><span class="step-t">${esc(t)}</span></li>`).join('');
   return headerHtml('paper', s) +
-    railHtml([['breakdown', 'Breakdown & Method', 'book-open-text'], ['flow', 'Flowchart', 'git-branch'], ['lexicon', 'Lexicon', 'languages'], ['quiz', 'Mastery Check', 'circle-check'], ['chat', 'Ask AI', 'message-circle']]) +
+    railHtml([['breakdown', 'Breakdown & Method', 'book-open-text'], ...((d.ordered_formulas || []).length ? [['formulas', 'Formulas', 'sigma']] : []), ['flow', 'Flowchart', 'git-branch'], ['lexicon', 'Lexicon', 'languages'], ['quiz', 'Mastery Check', 'circle-check'], ['chat', 'Ask AI', 'message-circle']]) +
     `<div class="stack">
       <div class="bento2 sec" data-sec="breakdown">
         <div class="card p-5 sm:p-6">
@@ -2319,6 +2363,7 @@ function paperHtml(s) {
           <ol class="timeline text-sm">${steps}</ol>
         </div>
       </div>
+      ${formulaSheetHtml(d)}
       ${diagramCard('paper', 'Interactive Flowchart', 'Architecture / workflow of the material')}
       ${lexiconHtml(s)}
       ${quizHtml(s)}
