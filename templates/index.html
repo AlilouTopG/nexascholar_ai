@@ -927,6 +927,121 @@ body.print-lesson .levelup { display:none !important; }
   .fx-tag { background:#FEF3C7 !important; color:#92400E !important; border-color:#FCD34D !important; }
 }
 
+/* =====================================================================
+   v11  Export Colorful PDF: toolbar + publication-grade print engine
+   ===================================================================== */
+#printdoc { display:none !important; }
+.export-bar { display:flex; flex-wrap:wrap; align-items:center; gap:.6rem .9rem; }
+.export-bar .btn-primary { box-shadow:0 0 26px -6px var(--em-glow); }
+.export-bar .btn-primary[disabled] { opacity:.75; cursor:progress; }
+@media (max-width:768px) { .export-bar { width:100%; } .export-bar .btn-primary { width:100%; justify-content:center; min-height:44px; } }
+
+@media print {
+  /* vivid colour on white paper everywhere */
+  *, *::before, *::after { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  .card, .fx-item, .vocab-card, .qcard, .code-block, .dg-card, .mermaid, .fx-card .fx-item, .edge-list li { break-inside:avoid; }
+  .mermaid { max-width:100%; }
+  .mermaid svg { max-width:100% !important; height:auto !important; }
+  .mermaid .nodeLabel, .mermaid .label, .mermaid foreignObject div, .mermaid foreignObject span { color:#0F172A !important; }
+  .mermaid .edgeLabel, .mermaid .edgeLabel p, .mermaid .labelBkg { background-color:#FFFFFF !important; color:#0F172A !important; }
+  .mermaid .flowchart-link, .mermaid .edgePaths path { stroke:#334155 !important; }
+
+  body.print-doc, body.print-doc html { background:#fff !important; }
+  html:has(body.print-doc), body.print-doc { height:auto !important; overflow:visible !important; background:#fff !important; color:#0F172A !important; }
+  body.print-doc > *:not(#printdoc) { display:none !important; }
+  body.print-doc #printdoc { display:block !important; font-family:'Plus Jakarta Sans',system-ui,sans-serif; color:#0F172A; font-size:10.3pt; line-height:1.55; }
+  #printdoc * { box-sizing:border-box; }
+  #printdoc .katex, #printdoc .katex * { color:#0F172A !important; }
+  #printdoc p { margin:0 0 5pt; } #printdoc ul, #printdoc ol { margin:2pt 0 5pt 14pt; padding-left:6pt; }
+  #printdoc .prose-nx, #printdoc .prose-nx * { color:inherit; }
+  #printdoc code { font-family:'JetBrains Mono',monospace; font-size:.9em; background:#F1F5F9; border-radius:3pt; padding:0 2pt; }
+
+  /* palette tokens per section */
+  #printdoc .c-em { --acc:#047857; --soft:#ECFDF5; --line:#6EE7B7; }
+  #printdoc .c-sky { --acc:#0369A1; --soft:#F0F9FF; --line:#7DD3FC; }
+  #printdoc .c-in { --acc:#4338CA; --soft:#EEF2FF; --line:#A5B4FC; }
+  #printdoc .c-vi { --acc:#6D28D9; --soft:#F5F3FF; --line:#C4B5FD; }
+  #printdoc .c-am { --acc:#B45309; --soft:#FFFBEB; --line:#FCD34D; }
+  #printdoc .c-ro { --acc:#BE123C; --soft:#FFF1F2; --line:#FDA4AF; }
+  #printdoc .c-co { --acc:#0E7490; --soft:#ECFEFF; --line:#67E8F9; }
+
+  .pd-brand { border-radius:12pt; padding:15pt 18pt; color:#fff !important; margin-bottom:10pt; break-inside:avoid; background:linear-gradient(100deg,#047857 0%,#0F766E 42%,#4338CA 100%) !important; }
+  .pd-brand.pd-code { background:linear-gradient(100deg,#0369A1 0%,#0E7490 45%,#4338CA 100%) !important; }
+  .pd-brand, .pd-brand * { color:#fff !important; }
+  .pd-top { display:flex; justify-content:space-between; align-items:center; gap:10pt; font-size:8.5pt; opacity:.95; margin-bottom:8pt; }
+  .pd-logo { display:inline-flex; align-items:center; gap:6pt; font-weight:800; font-size:10pt; }
+  .pd-logo b { display:inline-flex; width:16pt; height:16pt; align-items:center; justify-content:center; border-radius:5pt; background:#fff !important; color:#047857 !important; font-family:'JetBrains Mono',monospace; }
+  .pd-brand h1 { font-size:21pt; line-height:1.15; font-weight:800; margin:0; overflow-wrap:anywhere; }
+  .pd-meta { font-size:8.8pt; margin:5pt 0 0 !important; opacity:.92; }
+  .pd-chips { display:flex; flex-wrap:wrap; gap:4pt; margin-top:8pt; }
+  .pd-chips span { font-size:8pt; font-weight:700; padding:2pt 8pt; border-radius:99pt; background:rgba(255,255,255,.2) !important; border:1px solid rgba(255,255,255,.55); }
+
+  .pd-sec { margin-top:14pt; }
+  .pd-h { display:flex; align-items:center; gap:8pt; font-size:13.5pt; font-weight:800; color:var(--acc) !important; margin:0 0 7pt; padding-bottom:4pt; border-bottom:2px solid var(--acc); break-after:avoid; }
+  .pd-hn { display:inline-flex; width:18pt; height:18pt; flex:none; align-items:center; justify-content:center; border-radius:50%; background:var(--acc) !important; color:#fff !important; font-size:9.5pt; }
+  .pd-sub { font-size:10.5pt; font-weight:700; color:#B45309 !important; margin:8pt 0 4pt; break-after:avoid; }
+  .pd-two { display:grid; grid-template-columns:1fr 1fr; gap:8pt; margin-bottom:8pt; }
+  .pd-card { border:1px solid var(--line); border-left:4pt solid var(--acc); border-radius:8pt; background:var(--soft) !important; padding:7pt 11pt; break-inside:avoid; }
+  .pd-card h3 { margin:0 0 4pt; font-size:9pt; letter-spacing:.05em; text-transform:uppercase; font-weight:800; color:var(--acc) !important; }
+  .pd-card[dir="rtl"] { border-left:1px solid var(--line); border-right:4pt solid var(--acc); text-align:right; font-family:'Noto Sans Arabic','Plus Jakarta Sans',sans-serif; line-height:1.9; }
+  .pd-card[dir="rtl"] h3 { text-transform:none; letter-spacing:0; font-size:10.5pt; }
+  .pd-card[dir="rtl"] .katex { direction:ltr; unicode-bidi:isolate; }
+
+  .pd-fx { border:1px solid #A5B4FC; border-left:4pt solid #4F46E5; border-radius:9pt; background:#EEF2FF !important; padding:7pt 10pt 8pt; margin-bottom:8pt; break-inside:avoid; }
+  .pd-fx header { display:flex; align-items:center; gap:7pt; }
+  .pd-fx h3 { margin:0; font-size:11pt; font-weight:700; color:#312E81 !important; }
+  .pd-n { background:#4F46E5 !important; color:#fff !important; font-family:'JetBrains Mono',monospace; font-weight:800; font-size:8.5pt; padding:1pt 8pt; border-radius:99pt; }
+  .pd-eq { margin:6pt 0 5pt; background:#fff !important; border:1px solid #A5B4FC; border-radius:7pt; padding:5pt 6pt; text-align:center; overflow:visible; }
+  .pd-eq .katex-display { margin:2pt 0 !important; font-size:.95em; overflow:visible !important; }
+  .pd-legend { font-size:9.4pt; color:#1E293B !important; } .pd-legend p { margin:0; }
+  .pd-when { margin-top:4pt; font-size:9pt; color:#78350F !important; } .pd-when b { background:#FEF3C7 !important; color:#92400E !important; border:1px solid #FCD34D; border-radius:99pt; padding:0 6pt; margin-right:4pt; font-size:7.8pt; text-transform:uppercase; letter-spacing:.05em; }
+
+  .pd-steps { list-style:none; margin:0 !important; padding:0 !important; }
+  .pd-steps li { display:flex; gap:8pt; align-items:flex-start; margin-bottom:5pt; padding:5pt 9pt; background:#ECFDF5 !important; border:1px solid #A7F3D0; border-radius:7pt; break-inside:avoid; }
+  .pd-sn { flex:none; display:inline-flex; width:16pt; height:16pt; align-items:center; justify-content:center; border-radius:50%; background:#047857 !important; color:#fff !important; font-weight:800; font-size:8.5pt; }
+
+  .pd-dg { border:1px solid #7DD3FC; border-radius:9pt; padding:8pt; background:#fff !important; text-align:center; break-inside:avoid; }
+  .pd-dg .mermaid { margin:0 auto; }
+  .pd-note { color:#9F1239 !important; font-style:italic; }
+
+  .pd-vocab { display:grid; grid-template-columns:1fr 1fr; gap:7pt; }
+  .pd-v { border:1px solid #BAE6FD; border-top:3pt solid #0284C7; background:#F0F9FF !important; border-radius:8pt; padding:6pt 9pt; break-inside:avoid; font-size:9pt; }
+  .pd-v header { display:flex; align-items:center; gap:6pt; flex-wrap:wrap; } .pd-term { font-family:'JetBrains Mono',monospace; font-size:10.5pt; color:#075985 !important; }
+  .pd-cefr { background:#4F46E5 !important; color:#fff !important; font-weight:800; font-size:7.8pt; padding:0 6pt; border-radius:99pt; }
+  .pd-tr { display:flex; flex-wrap:wrap; gap:4pt; margin:4pt 0; }
+  .pd-tr > span { display:inline-flex; align-items:center; gap:4pt; border:1px solid #CBD5E1; background:#fff !important; border-radius:99pt; padding:0 7pt 0 0; }
+  .pd-tr b { font-family:'JetBrains Mono',monospace; font-size:7pt; padding:1pt 5pt; border-radius:99pt; color:#fff !important; }
+  .pd-tr .ar b { background:#059669 !important; } .pd-tr .fr b { background:#0284C7 !important; }
+  .pd-tr .ar span { font-family:'Noto Sans Arabic','Plus Jakarta Sans',sans-serif; font-size:9.5pt; }
+  .pd-v p { margin:2pt 0 4pt; }
+  .pd-gram { background:#FEF3C7 !important; border:1px solid #FCD34D; border-radius:6pt; padding:3pt 7pt; margin:3pt 0; color:#78350F !important; font-size:8.6pt; } .pd-gram b { color:#92400E !important; }
+  .pd-line { font-size:8.6pt; color:#334155 !important; margin-top:2pt; } .pd-line b { color:#0F172A !important; margin-right:3pt; }
+  .pd-ex { margin-top:3pt; border-left:2pt solid #F59E0B; padding-left:6pt; font-style:italic; color:#475569 !important; font-size:8.6pt; }
+
+  .pd-q { border:1px solid #C4B5FD; border-left:4pt solid #7C3AED; background:#F5F3FF !important; border-radius:9pt; padding:7pt 10pt; margin-bottom:8pt; break-inside:avoid; }
+  .pd-qt { font-weight:700; margin-bottom:4pt !important; }
+  .pd-opt { display:flex; gap:7pt; align-items:baseline; padding:3pt 8pt; margin-bottom:3pt; border:1px solid #DDD6FE; border-radius:6pt; background:#fff !important; }
+  .pd-opt b { color:#6D28D9 !important; font-family:'JetBrains Mono',monospace; }
+  .pd-opt.ok { background:#DCFCE7 !important; border-color:#16A34A; font-weight:700; } .pd-opt.ok b { color:#166534 !important; }
+  .pd-opt em { margin-left:auto; font-style:normal; font-size:7.8pt; font-weight:800; color:#fff !important; background:#16A34A !important; border-radius:99pt; padding:0 7pt; }
+  .pd-expl { margin-top:5pt; background:#ECFDF5 !important; border-left:3pt solid #059669; border-radius:4pt; padding:4pt 8pt; font-size:9.3pt; color:#14532D !important; } .pd-expl b { color:#047857 !important; }
+
+  .pd-pre { background:#F8FAFC !important; border:1px solid #CBD5E1; border-left:4pt solid #0369A1; border-radius:7pt; padding:7pt 9pt; margin:0; font-family:'JetBrains Mono',monospace; font-size:8.2pt; line-height:1.5; white-space:pre-wrap; word-break:break-word; color:#0F172A !important; break-inside:avoid; }
+  .pd-pre.long { break-inside:auto; }
+  .pd-lbl { display:grid; grid-template-columns:44% 1fr; gap:9pt; margin-bottom:8pt; padding:6pt; border:1px solid #A7F3D0; border-radius:8pt; background:#F0FDF4 !important; break-inside:avoid; }
+  .pd-lines { font-family:'JetBrains Mono',monospace; font-size:7.8pt; font-weight:700; color:#047857 !important; margin-bottom:3pt; }
+  .pd-lbl-x { font-size:9.4pt; }
+  .pd-edge { list-style:none; margin:0 !important; padding:0 !important; }
+  .pd-edge li { background:#FFFBEB !important; border:1px solid #FCD34D; border-left:4pt solid #D97706; border-radius:6pt; padding:3pt 9pt; margin-bottom:4pt; font-size:9.4pt; break-inside:avoid; }
+
+  .pd-q-bub, .pd-a-bub { display:flex; gap:8pt; align-items:flex-start; border-radius:8pt; padding:5pt 9pt; margin-bottom:6pt; break-inside:avoid; }
+  .pd-q-bub { break-after:avoid; background:#E0F2FE !important; border-left:4pt solid #0369A1; } .pd-a-bub { background:#F8FAFC !important; border:1px solid #CBD5E1; border-left:4pt solid #047857; }
+  .pd-q-bub > b, .pd-a-bub > b { flex:none; width:16pt; height:16pt; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:8.5pt; color:#fff !important; }
+  .pd-q-bub > b { background:#0369A1 !important; } .pd-a-bub > b { background:#047857 !important; }
+  .pd-q-bub > div { font-weight:600; } .pd-a-bub > div, .pd-q-bub > div { min-width:0; overflow-wrap:anywhere; }
+  .pd-foot { margin-top:16pt; padding-top:6pt; border-top:1px solid #CBD5E1; font-size:8pt; color:#64748B !important; text-align:center; }
+}
+
 </style>
 </head>
 <body>
@@ -1183,6 +1298,8 @@ body.print-lesson .levelup { display:none !important; }
     <button class="btn-primary w-full justify-center" id="inst-ok">Got it</button>
   </div>
 </div>
+
+<div id="printdoc" class="pd" aria-hidden="true"></div>
 
 <div id="toasts" aria-live="polite"></div>
 
@@ -2180,7 +2297,10 @@ function headerHtml(ws, s) {
         <p class="text-xs text-slate-500 mt-1">${metaLine(s)}</p>
         ${badges ? `<div class="flex flex-wrap gap-1.5 mt-2.5">${badges}</div>` : ''}
       </div>
-      <button class="btn-ghost no-print" data-act="export"><i data-lucide="printer" class="w-3.5 h-3.5"></i>Export Study Guide (Print/PDF)</button>
+      <div class="export-bar no-print">
+        <button class="btn-primary" data-act="export" title="Download a full-colour, publication-grade study guide as PDF"><i data-lucide="file-down" class="w-4 h-4"></i>Export Colorful PDF</button>
+        <label class="chk"><input type="checkbox" id="pdf-ans-${ws}" checked><span>Include Detailed Answers / Key</span></label>
+      </div>
     </div>`;
 }
 function railHtml(items) {
@@ -2717,16 +2837,6 @@ async function runCode() {
   });
 }
 
-function exportGuide(ws) {
-  const s = activeSession(ws); if (!s) return;
-  stopAllSpeech();
-  const prev = document.title;
-  document.title = 'NexaScholar - ' + s.title;
-  const restore = () => { document.title = prev; window.removeEventListener('afterprint', restore); };
-  window.addEventListener('afterprint', restore);
-  window.print();
-}
-
 /* =====================================================================
    Events
    ===================================================================== */
@@ -3050,8 +3160,8 @@ function lesHtml(r) {
       <div class="ex-fb hidden"></div></div>`).join('');
   return `
     <div class="lesson-bar no-print fade-in">
-      <button class="btn-primary" data-act="lesson-pdf"><i data-lucide="file-down" class="w-4 h-4"></i>Export Lesson PDF</button>
-      <label class="chk"><input type="checkbox" id="pdf-key" checked><span>Include Answer Key in PDF</span></label>
+      <button class="btn-primary" data-act="lesson-pdf"><i data-lucide="file-down" class="w-4 h-4"></i>Export Colorful PDF</button>
+      <label class="chk"><input type="checkbox" id="pdf-key" checked><span>Include Detailed Answers / Key</span></label>
       <button class="btn-ghost lesson-eval" data-act="lesson-eval"><i data-lucide="badge-check" class="w-4 h-4"></i>Complete Lesson &amp; Evaluate</button>
     </div>
     ${levelupHtml(r)}
@@ -3087,10 +3197,10 @@ function handoutHtml(r) {
     ${mcq.map((q, i) => `<div class="ho-q"><p><b>${i + 1}.</b> ${esc(q.question)}</p><div class="ho-opts">${q.options.map((o, oi) => `<span><i></i>${LETTERS[oi]}. ${esc(o)}</span>`).join('')}</div></div>`).join('')}
     ${ec.length ? `<h3 class="ho-part">Part B &middot; Find and correct the error</h3><table class="ho-tbl ho-work"><thead><tr><th style="width:2rem">#</th><th>Sentence with an error</th><th>Your correction</th></tr></thead><tbody>${ec.map((e, i) => `<tr><td>${i + 1}</td><td>${esc(e.faulty_sentence)}</td><td>${lines(2)}</td></tr>`).join('')}</tbody></table>` : ''}
     ${st.length ? `<h3 class="ho-part">Part C &middot; Rewrite using the keyword</h3><table class="ho-tbl ho-work"><thead><tr><th style="width:2rem">#</th><th>Sentence</th><th style="width:7rem">Keyword</th></tr></thead><tbody>${st.map((e, i) => `<tr><td rowspan="2">${i + 1}</td><td>${esc(e.prompt_sentence)}</td><td><b>${esc(e.keyword)}</b></td></tr><tr><td colspan="2">${lines(2)}</td></tr>`).join('')}</tbody></table>` : ''}
-    <div class="ho-key"><div class="ho-key-h">Answer key</div>
+    <div class="ho-key"><div class="ho-key-h">Detailed Answer Key</div>
       <p><b>Part A.</b> ${mcq.map((q, i) => `${i + 1}. ${LETTERS[q.answer_index] || '?'}`).join(' &nbsp; ')}</p>
       <ul>${mcq.map((q, i) => `<li><b>${i + 1}.</b> ${esc(q.options[q.answer_index] || '')} &mdash; ${esc(q.explanation)}</li>`).join('')}</ul>
-      ${ec.length ? `<p><b>Part B.</b></p><ul>${ec.map((e, i) => `<li><b>${i + 1}.</b> ${esc(e.corrected_sentence)} <em>(${esc(e.rule_applied)})</em></li>`).join('')}</ul>` : ''}
+      ${ec.length ? `<p><b>Part B.</b></p><ul>${ec.map((e, i) => `<li><b>${i + 1}.</b> <s>${esc(e.faulty_sentence)}</s> &rarr; <b>${esc(e.corrected_sentence)}</b> <em>(${esc(e.rule_applied)})</em></li>`).join('')}</ul>` : ''}
       ${st.length ? `<p><b>Part C.</b> Model answers; other correct versions are possible.</p><ul>${st.map((e, i) => `<li><b>${i + 1}.</b> ${esc(e.model_answer)}</li>`).join('')}</ul>` : ''}</div>
   </div>`;
 }
@@ -3329,6 +3439,140 @@ paintDomain();
 setCefr(cefr);
 setWorkspace(state.ws);
 icons();
+
+/* =====================================================================
+   Export Colorful PDF: a dedicated, publication-grade print document
+   (#printdoc) built from the session data, with a light-mode vector flowchart
+   ===================================================================== */
+const LIGHT_CLASSDEFS = [
+  'classDef emerald fill:#F0FDF4,stroke:#0F172A,color:#0F172A,stroke-width:1.6px',
+  'classDef amber fill:#FEF3C7,stroke:#0F172A,color:#0F172A,stroke-width:1.6px',
+  'classDef sky fill:#EEF2FF,stroke:#0F172A,color:#0F172A,stroke-width:1.6px'
+];
+const LIGHT_INIT = '%%{init: {"theme":"base","flowchart":{"htmlLabels":true,"curve":"basis","useMaxWidth":false},"themeVariables":{"darkMode":false,"fontFamily":"\\"JetBrains Mono\\", monospace","fontSize":"13px","background":"#FFFFFF","primaryColor":"#EEF2FF","primaryTextColor":"#0F172A","primaryBorderColor":"#0F172A","secondaryColor":"#F0FDF4","tertiaryColor":"#FFFFFF","lineColor":"#334155","textColor":"#0F172A","mainBkg":"#EEF2FF","nodeBorder":"#0F172A","edgeLabelBackground":"#FFFFFF","clusterBkg":"#F8FAFC","clusterBorder":"#334155"}}}%%\n';
+
+/* Re-render the flowchart with a light paper theme. Returns '' when there is no diagram. */
+async function lightDiagram(raw) {
+  if (!raw || !String(raw).trim()) return '';
+  let code = cleanMermaid(raw).split('\n').filter(l => !/^\s*classDef\s+(emerald|amber|sky)\b/.test(l)).join('\n');
+  code += '\n' + LIGHT_CLASSDEFS.join('\n');
+  const id = 'mmdp-' + (++diagramCounter);
+  try {
+    const { svg } = await mermaid.render(id, LIGHT_INIT + code);
+    const doc = new DOMParser().parseFromString(svg, 'image/svg+xml'), el = doc.documentElement;
+    if (!el || el.nodeName.toLowerCase() !== 'svg') return '';
+    const vb = (el.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+    el.removeAttribute('width'); el.removeAttribute('height');
+    el.setAttribute('style', 'display:block;margin:0 auto;width:100%;height:auto;max-width:100%;max-height:235mm');
+    el.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    return `<div class="mermaid" data-w="${Math.round(vb[2] || 0)}">${new XMLSerializer().serializeToString(el)}</div>`;
+  } catch (err) {
+    [id, 'd' + id].forEach(i => { const n = document.getElementById(i); if (n) n.remove(); });
+    return '';
+  }
+}
+
+const fxWrap = t => { t = String(t || '').trim(); return /^(\$\$|\\\[)/.test(t) ? t : '$$' + t.replace(/^\$|\$$/g, '') + '$$'; };
+const pdDate = () => new Date().toLocaleDateString(undefined, { dateStyle: 'long' });
+
+function pdBrand(kind, s, label, chips) {
+  return `<header class="pd-brand pd-${kind}">
+    <div class="pd-top"><span class="pd-logo"><b>N</b>NexaScholar AI</span><span>${esc(label)} &middot; ${esc(pdDate())}</span></div>
+    <h1>${esc(s.title)}</h1>
+    <p class="pd-meta">${metaLine(s)}</p>
+    ${chips.length ? `<div class="pd-chips">${chips.map(c => `<span>${esc(c)}</span>`).join('')}</div>` : ''}
+  </header>`;
+}
+function pdSection(n, title, cls, body) { return `<section class="pd-sec ${cls}"><h2 class="pd-h"><span class="pd-hn">${n}</span>${title}</h2>${body}</section>`; }
+function pdDiagram(dg) { return dg ? `<div class="pd-dg">${dg}</div>` : '<p class="pd-note">The diagram could not be rendered for print.</p>'; }
+function pdChat(s) {
+  const turns = (s.chat || []).filter(m => m && m.content);
+  if (!turns.length) return '';
+  return turns.map(m => m.role === 'user'
+    ? `<div class="pd-q-bub"><b>Q</b><div>${esc(m.content)}</div></div>`
+    : `<div class="pd-a-bub"><b>A</b><div class="prose-nx">${mdMath(m.content)}</div></div>`).join('');
+}
+
+function paperPrintHtml(s, ans, dg) {
+  const d = s.data; let n = 0;
+  const chips = [...(s.data.sources || []).map(x => x.name), DOMAIN_LABEL[d.domain || s.domain] || ''].filter(Boolean).slice(0, 8);
+  const out = [pdBrand('paper', s, 'Colorful Study Guide', chips)];
+  let sum = `<div class="pd-two"><div class="pd-card c-em"><h3>English &middot; Deep Academic</h3>${mdMath(d.summary)}</div>
+    <div class="pd-card c-sky"><h3>English &middot; Intuition</h3>${mdMath(d.plain_english_summary || d.summary)}</div></div>`;
+  if (d.arabic_summary || d.french_summary) {
+    sum += `<div class="pd-two">${d.arabic_summary ? `<div class="pd-card c-am" dir="rtl" lang="ar"><h3>العربية (ملخص)</h3>${mdMath(d.arabic_summary)}</div>` : ''}
+      ${d.french_summary ? `<div class="pd-card c-ro" lang="fr"><h3>Fran&ccedil;ais (R&eacute;sum&eacute;)</h3>${mdMath(d.french_summary)}</div>` : ''}</div>`;
+  }
+  out.push(pdSection(++n, 'Executive Summary', 'c-em', sum));
+  const fx = (d.ordered_formulas || []).filter(f => f && f.latex_formula);
+  if (fx.length) out.push(pdSection(++n, 'Ordered Laws &amp; Formula Sheet', 'c-in', fx.map((f, i) => `
+    <article class="pd-fx"><header><span class="pd-n">#${i + 1}</span><h3>${esc(String(f.name || '').replace(/^\s*#?\d+\s*[.):\-]\s*/, ''))}</h3></header>
+      <div class="pd-eq">${esc(fxWrap(f.latex_formula))}</div>
+      ${f.variables_legend ? `<div class="pd-legend prose-nx">${mdMath(f.variables_legend)}</div>` : ''}
+      ${f.when_to_use ? `<div class="pd-when"><b>When to use</b> ${mdMath(f.when_to_use).replace(/^<p>|<\/p>\s*$/g, '')}</div>` : ''}</article>`).join('')));
+  const steps = (d.methodology_steps || []).map((t, i) => `<li><span class="pd-sn">${i + 1}</span><span>${esc(t)}</span></li>`).join('');
+  if (steps) out.push(pdSection(++n, 'Step-by-Step Methodology', 'c-em', `<ol class="pd-steps">${steps}</ol>`));
+  if (d.mermaid_code) out.push(pdSection(++n, 'Flowchart', 'c-sky', pdDiagram(dg)));
+  const vocab = d.vocabulary || [];
+  if (vocab.length) out.push(pdSection(++n, 'Technical English Lexicon', 'c-sky', `<div class="pd-vocab">${vocab.map(v => `
+    <article class="pd-v"><header><b class="pd-term">${esc(v.term)}</b>${v.cefr_level ? `<span class="pd-cefr">${esc(v.cefr_level)}</span>` : ''}</header>
+      ${(v.arabic_equivalent || v.french_equivalent) ? `<div class="pd-tr">${v.arabic_equivalent ? `<span class="ar"><b>AR</b><span dir="rtl" lang="ar">${esc(v.arabic_equivalent)}</span></span>` : ''}${v.french_equivalent ? `<span class="fr"><b>FR</b><span lang="fr">${esc(v.french_equivalent)}</span></span>` : ''}</div>` : ''}
+      <p>${esc(v.definition)}</p>
+      ${v.grammar_usage_note ? `<div class="pd-gram"><b>Grammar note.</b> ${esc(v.grammar_usage_note)}</div>` : ''}
+      ${v.word_family ? `<div class="pd-line"><b>Word family</b> ${esc(v.word_family)}</div>` : ''}
+      ${(v.collocations || []).length ? `<div class="pd-line"><b>Collocations</b> ${v.collocations.map(c => `<i>${esc(c)}</i>`).join(' &middot; ')}</div>` : ''}
+      ${v.context_usage ? `<div class="pd-ex">${esc(v.context_usage)}</div>` : ''}
+      ${(v.simpler_synonyms || []).length ? `<div class="pd-line"><b>Simpler</b> ${esc(v.simpler_synonyms.join(', '))}</div>` : ''}</article>`).join('')}</div>`));
+  const quiz = d.quiz || [];
+  if (quiz.length) out.push(pdSection(++n, ans ? 'Mastery Check &middot; with detailed answers' : 'Mastery Check', 'c-vi', quiz.map((q, i) => `
+    <div class="pd-q"><p class="pd-qt"><b>${i + 1}.</b> ${esc(q.question)}</p>
+      ${q.options.map((o, oi) => `<div class="pd-opt ${ans && oi === q.correct_index ? 'ok' : ''}"><b>${LETTERS[oi]}</b><span>${esc(o)}</span>${ans && oi === q.correct_index ? '<em>Correct</em>' : ''}</div>`).join('')}
+      ${ans && q.explanation ? `<div class="pd-expl"><b>Detailed explanation.</b> ${mdMath(q.explanation).replace(/^<p>|<\/p>\s*$/g, '')}</div>` : ''}</div>`).join('')));
+  const chat = pdChat(s);
+  if (chat && ans) out.push(pdSection(++n, 'Follow-up Q&amp;A', 'c-em', chat));
+  out.push('<footer class="pd-foot">Generated by NexaScholar AI &middot; AI-generated explanations can contain mistakes; verify against the original source.</footer>');
+  return out.join('');
+}
+
+function codePrintHtml(s, ans, dg) {
+  const d = s.data, kind = langInfo(s.lang || 'auto').k; let n = 0;
+  const out = [pdBrand('code', s, 'Colorful Code Guide', [d.language || 'Code', d.complexity ? 'Complexity analysed' : ''].filter(Boolean))];
+  out.push(pdSection(++n, 'Overview', 'c-co', `<div class="pd-card c-sky prose-nx">${mdMath(d.overview)}</div>`));
+  if (s.code) out.push(pdSection(++n, 'Source Code', 'c-co', `<pre class="pd-pre ${s.code.split('\n').length > 38 ? 'long' : ''}">${highlight(s.code, kind)}</pre>`));
+  const blocks = (d.line_by_line || []).map(b => `<div class="pd-lbl"><div><div class="pd-lines">Line${String(b.lines).includes('-') ? 's' : ''} ${esc(b.lines)}</div><pre class="pd-pre">${highlight(b.code || '', kind)}</pre></div><div class="pd-lbl-x prose-nx">${mdMath(b.explanation)}</div></div>`).join('');
+  if (blocks) out.push(pdSection(++n, 'Line-by-Line Execution Breakdown', 'c-em', blocks));
+  const edge = (d.edge_cases || []).map(x => `<li>${esc(x)}</li>`).join('');
+  out.push(pdSection(++n, 'Time &amp; Space Complexity', 'c-am', `<div class="pd-card c-am prose-nx">${mdMath(d.complexity || '')}</div>${edge ? `<h3 class="pd-sub">Edge cases &amp; pitfalls</h3><ul class="pd-edge">${edge}</ul>` : ''}`));
+  if (d.mermaid_code) out.push(pdSection(++n, 'Control-Flow Diagram', 'c-sky', pdDiagram(dg)));
+  const chat = pdChat(s);
+  if (chat && ans) out.push(pdSection(++n, 'Follow-up Q&amp;A', 'c-vi', chat));
+  out.push('<footer class="pd-foot">Generated by NexaScholar AI &middot; AI-generated explanations can contain mistakes; verify against the original source.</footer>');
+  return out.join('');
+}
+
+async function exportGuide(ws) {
+  const s = activeSession(ws); if (!s) return;
+  stopAllSpeech();
+  const box = $('#pdf-ans-' + ws), ans = box ? box.checked : true;
+  const btn = $('[data-act="export"]', res(ws)), label = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Preparing PDF...'; }
+  const prev = document.title;
+  try {
+    const dg = (s.data.mermaid_code) ? await lightDiagram(s.data.mermaid_code) : '';
+    const pd = $('#printdoc'); pd.innerHTML = ws === 'paper' ? paperPrintHtml(s, ans, dg) : codePrintHtml(s, ans, dg);
+    renderMath(pd);
+    try { await document.fonts.ready; } catch (e) { /* ignore */ }
+    document.body.classList.add('print-doc'); document.title = 'NexaScholar - ' + s.title;
+    const restore = () => { document.body.classList.remove('print-doc'); document.title = prev; pd.innerHTML = ''; window.removeEventListener('afterprint', restore); };
+    window.addEventListener('afterprint', restore);
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    window.print();
+  } catch (err) {
+    toast('Could not prepare the PDF: ' + (err && err.message || err), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = label; icons(); }
+  }
+}
 
 
 </script>
