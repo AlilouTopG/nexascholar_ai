@@ -10,9 +10,13 @@ import json
 import logging
 import os
 import re
+import threading
+import time
+import types
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 import groq
 from dotenv import dotenv_values
@@ -91,15 +95,21 @@ ENV_FILE = _load_env_safe()
 # Configuration
 # --------------------------------------------------------------------------- #
 
+# Groq is the ONLY provider. Models are discovered live from the account (client.models.list()), so none of
+# these names has to exist: they are only a ranking hint plus a static last-resort list if discovery is down.
 MODEL = "openai/gpt-oss-120b"
 FALLBACK_MODEL = os.getenv("GROQ_FALLBACK_MODEL", "llama-3.3-70b-versatile").strip() or "llama-3.3-70b-versatile"
-# Fast primary model for the structured-JSON endpoints (/api/analyze, /api/explain-code, /api/english-lab).
-# llama-3.3-70b-versatile writes JSON several times faster than the gpt-oss reasoning model and has higher
-# free-tier limits. Set ANALYZE_MODEL=openai/gpt-oss-120b in .env to switch back; MODEL stays the secondary.
 FAST_MODEL = "llama-3.3-70b-versatile"
-ANALYZE_MODEL = os.getenv("ANALYZE_MODEL", FAST_MODEL).strip() or FAST_MODEL
+# High-throughput / high-limit models first; every other active chat model on the account follows.
+PRIORITY_MODELS = ["llama-3.1-8b-instant", "openai/gpt-oss-20b", "qwen/qwen3-32b", "openai/gpt-oss-120b"]
+# Optional operator override: ANALYZE_MODEL is tried first (if the account has it); the ranked chain follows.
+ANALYZE_MODEL = os.getenv("ANALYZE_MODEL", "").strip()
+MODEL_CACHE_TTL = 600.0      # seconds the live model list is cached in memory
+MODEL_RETRY_AFTER = 30.0     # after a failed discovery, wait this long before asking Groq again
+MAX_MODEL_TRIES = 6          # models tried per request before giving up
 GROQ_TIMEOUT = 45.0          # hard per-request timeout on the Groq client: a stalled call can never hang
 REQUEST_DEADLINE = 50.0      # total budget for one JSON endpoint (Render's gateway gives up at 60 s)
+MAP_BUDGET = 22.0            # time allowed for the parallel "notes" pass on a long document
 PDF_TIMEOUT = 25.0           # PDF text extraction budget
 VISION_BUDGET = 40.0         # total budget for transcribing all uploaded images
 PDF_FULL_PAGES = 40          # longer PDFs: read the first and last pages only (conclusions matter, the middle is condensed)
@@ -125,9 +135,13 @@ MAX_PDF_BYTES = 15 * 1024 * 1024        # per PDF
 MAX_IMAGE_BYTES = 12 * 1024 * 1024      # per uploaded image (re-compressed before vision)
 MAX_VISION_B64_BYTES = 3_300_000        # Groq caps base64 image payloads at ~4 MB
 MAX_TOTAL_UPLOAD = 45 * 1024 * 1024
-MAX_PROMPT_CHARS = _env_int("MAX_PROMPT_CHARS", 13_500)   # ~3,400 tokens of document: keeps prompt + output inside Groq free-tier TPM
+MAX_CHUNK_CHARS = _env_int("MAX_CHUNK_CHARS", 9_500)      # one request never carries more document than this (~2,400 tokens)
+MAX_CHUNKS = 3                                            # long documents are split into at most this many parts
+MAX_TOTAL_CHARS = MAX_CHUNK_CHARS * MAX_CHUNKS            # everything beyond this is condensed (head + tail kept)
+MAX_PROMPT_CHARS = MAX_CHUNK_CHARS                        # single-request budget (kept as an alias)
+NOTES_MAX_TOKENS = 900
 MIN_TEXT_CHARS = 80
-MAX_CODE_CHARS = 12_000
+MAX_CODE_CHARS = MAX_CHUNK_CHARS
 MAX_LAB_CHARS = 4_000
 MAX_TTS_CHARS = 3_500
 TTS_TIMEOUT = 15.0
@@ -138,30 +152,46 @@ TTS_VOICES = {
     "uk_female": "en-GB-SoniaNeural",
     "uk_male": "en-GB-RyanNeural",
 }
-MAX_JSON_TOKENS = _env_int("MAX_JSON_TOKENS", 4096)
+MAX_JSON_TOKENS = _env_int("MAX_JSON_TOKENS", 5120)
 MAX_JSON_ATTEMPTS = 3
 
 # Follow-up chat limits
 MAX_EXCERPT_CHARS = 9_000
-MAX_CHAT_CONTEXT = 11_000
+MAX_CHAT_CONTEXT = 8_000
 MAX_QUESTION_CHARS = 2_000
 MAX_HISTORY_TURNS = 8
-MAX_TURN_CHARS = 3_000
+MAX_TURN_CHARS = 1_800
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 TEXT_EXTS = {".txt", ".md", ".csv"}
 
 
-def api_key() -> str:
-    key = os.getenv("GROQ_API_KEY", "").strip().lstrip("\ufeff").strip().strip('"').strip("'").strip()
+def _clean_key(raw: str) -> str:
+    key = (raw or "").strip().lstrip("\ufeff").strip().strip('"').strip("'").strip()
     return "" if key == KEY_PLACEHOLDER else key
+
+
+def api_keys() -> List[str]:
+    """GROQ_API_KEYS (comma / space / semicolon separated) first, then the single GROQ_API_KEY. De-duplicated."""
+    parts = re.split(r"[,;\s]+", os.getenv("GROQ_API_KEYS", "")) + [os.getenv("GROQ_API_KEY", "")]
+    keys: List[str] = []
+    for p in parts:
+        k = _clean_key(p)
+        if k and k not in keys:
+            keys.append(k)
+    return keys
+
+
+def api_key() -> str:
+    keys = api_keys()
+    return keys[0] if keys else ""
 
 
 def vision_model_name() -> str:
     return os.getenv("GROQ_VISION_MODEL", DEFAULT_VISION_MODEL).strip() or DEFAULT_VISION_MODEL
 
 
-app = FastAPI(title="NexaScholar AI", version="3.5.0")
+app = FastAPI(title="NexaScholar AI", version="3.7.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -174,9 +204,9 @@ app.add_middleware(
 async def _startup_check() -> None:
     log.info("Env file: %s", ENV_FILE or "none found (looked for .env and .env.txt)")
     if api_key():
-        log.info("Groq configured: model=%s, vision=%s, reasoning=%s", MODEL, vision_model_name(), REASONING_EFFORT)
+        log.info("Groq configured: %d key(s), vision hint=%s, reasoning=%s", len(api_keys()), vision_model_name(), REASONING_EFFORT)
     else:
-        log.warning("GROQ_API_KEY is missing. Copy .env.example to .env and add your key.")
+        log.warning("GROQ_API_KEY / GROQ_API_KEYS is missing. Copy .env.example to .env and add your key(s).")
 
 
 # --------------------------------------------------------------------------- #
@@ -665,6 +695,7 @@ class LabRequest(BaseModel):
     mode: Literal["deconstruct", "upgrade", "level_lesson"]
     level: Literal["A1", "A2", "B1", "B2", "C1", "C2"] = DEFAULT_CEFR
     text: str = ""
+    model: Optional[str] = None
 
     @field_validator("level", mode="before")
     @classmethod
@@ -682,6 +713,7 @@ class ChatRequest(BaseModel):
     context: str = ""
     question: str = Field(min_length=1)
     history: List[ChatTurn] = Field(default_factory=list)
+    model: Optional[str] = None
 
 
 # --------------------------------------------------------------------------- #
@@ -1015,22 +1047,82 @@ VISION_CODE_PROMPT = (
 # Groq helpers
 # --------------------------------------------------------------------------- #
 
-_client: Optional[groq.AsyncGroq] = None
+_client: Optional[Any] = None          # test / advanced override: any object with .chat.completions and .models
 _vision_resolved: Optional[str] = None
 
 
-def get_client() -> groq.AsyncGroq:
-    global _client
-    key = api_key()
-    if not key:
+def _make_client(key: str) -> groq.AsyncGroq:
+    return groq.AsyncGroq(api_key=key, timeout=GROQ_TIMEOUT, max_retries=0)
+
+
+class GroqPool:
+    """Thread-safe round-robin over every configured Groq key.
+
+    Each request starts on the next key (spreading the per-key TPM/RPM quotas). If a key answers 429 (rate limit)
+    or 401 (bad key) the call immediately rotates to the following key; only when every key has failed does the
+    error reach the caller, which then moves on to the next model. Exposes the slice of the SDK the app uses:
+    pool.chat.completions.create(...) and pool.models.list().
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._idx = 0
+        self._clients: Dict[str, Any] = {}
+        self.chat = types.SimpleNamespace(completions=types.SimpleNamespace(create=self._create))
+        self.models = types.SimpleNamespace(list=self._list)
+
+    def _begin(self, n: int) -> int:
+        with self._lock:
+            i = self._idx % n
+            self._idx = (i + 1) % n
+            return i
+
+    def _client_for(self, key: str):
+        with self._lock:
+            c = self._clients.get(key)
+            if c is None:
+                c = self._clients[key] = _make_client(key)
+            return c
+
+    async def _call(self, fn):
+        keys = api_keys()
+        if not keys:
+            raise HTTPException(
+                status_code=500,
+                detail="GROQ_API_KEY is not configured. Copy .env.example to .env and add your key "
+                "(get one at https://console.groq.com/keys), then restart the server.",
+            )
+        n = len(keys)
+        start = self._begin(n)
+        for step in range(n):
+            try:
+                return await fn(self._client_for(keys[(start + step) % n]))
+            except groq.APIStatusError as exc:
+                if exc.status_code in (429, 401) and step < n - 1:
+                    log.warning("Groq key #%d answered %s; rotating to the next key.", (start + step) % n + 1, exc.status_code)
+                    continue
+                raise
+
+    async def _create(self, **kw):
+        return await self._call(lambda c: c.chat.completions.create(**kw))
+
+    async def _list(self, **kw):
+        return await self._call(lambda c: c.models.list(**kw))
+
+
+_pool = GroqPool()
+
+
+def get_client():
+    if _client is not None:
+        return _client
+    if not api_keys():
         raise HTTPException(
             status_code=500,
             detail="GROQ_API_KEY is not configured. Copy .env.example to .env and add your key "
             "(get one at https://console.groq.com/keys), then restart the server.",
         )
-    if _client is None:
-        _client = groq.AsyncGroq(api_key=key, timeout=GROQ_TIMEOUT, max_retries=0)
-    return _client
+    return _pool
 
 
 def _squash(text: object, limit: int = 400) -> str:
@@ -1075,8 +1167,11 @@ def groq_http_error(exc: Exception) -> HTTPException:
 
 async def llm_create(client: groq.AsyncGroq, **kw):
     """chat.completions.create with reasoning_effort sent via extra_body; drops it if the model rejects it."""
-    if "gpt-oss" in str(kw.get("model", "")):
-        kw.setdefault("extra_body", {"reasoning_effort": REASONING_EFFORT})   # only the reasoning model understands it
+    model_id = str(kw.get("model", "")).lower()
+    if "gpt-oss" in model_id:
+        kw.setdefault("extra_body", {"reasoning_effort": REASONING_EFFORT})   # only the gpt-oss models understand it
+    elif "qwen3" in model_id:
+        kw.setdefault("extra_body", {"reasoning_format": "hidden"})           # keep <think> blocks out of the answer
     try:
         return await client.chat.completions.create(**kw)
     except groq.BadRequestError as exc:
@@ -1093,19 +1188,134 @@ def _is_capacity_error(exc: Exception) -> bool:
     return isinstance(exc, groq.APIStatusError) and exc.status_code in (413, 429)
 
 
-async def _create_chat_completion_with_fallback(client: groq.AsyncGroq, **kw):
-    """llm_create on the requested model; on 413 / 429 retry ONCE on FALLBACK_MODEL (higher token limits)."""
-    primary = kw.get("model") or MODEL
-    secondary = FALLBACK_MODEL if primary == MODEL else MODEL      # llama <-> gpt-oss: each has its own quota
+# --------------------------------------------------------------------------- #
+# Live model discovery + ranked fallback chain
+# --------------------------------------------------------------------------- #
+
+_NON_CHAT = ("whisper", "tts", "playai", "orpheus", "guard", "embed", "compound", "safeguard", "moderation", "transcri")
+_VISION_HINTS = ("scout", "maverick", "vision")
+_models_cache: Dict[str, Any] = {"at": 0.0, "fail_at": 0.0, "text": [], "vision": [], "meta": {}, "verified": False}
+_dead_models: set = set()               # models that answered 404 / "decommissioned" this process
+_tpm_limits: Dict[str, int] = {}        # learned from 413 bodies ("Limit 6000, Requested 9000")
+last_model_used: ContextVar[str] = ContextVar("last_model_used", default="")
+
+
+def rank_text_models(ids: List[str]) -> List[str]:
+    ids = list(dict.fromkeys(ids))
+    head = [m for m in PRIORITY_MODELS if m in ids]
+    rest = sorted((m for m in ids if m not in head), key=lambda m: (0 if m == FAST_MODEL else 1, m))
+    return head + rest
+
+
+def _static_models() -> List[str]:
+    return list(dict.fromkeys(([ANALYZE_MODEL] if ANALYZE_MODEL else []) + PRIORITY_MODELS + [FAST_MODEL, FALLBACK_MODEL, MODEL]))
+
+
+async def discover_models(client, force: bool = False) -> Dict[str, Any]:
+    """client.models.list(), cached in memory. Never raises: on failure the previous list (or a static one) is used."""
+    now = time.monotonic()
+    c = _models_cache
+    if not force and c["at"] and now - c["at"] < MODEL_CACHE_TTL:
+        return c
+    if not force and not c["at"] and c["fail_at"] and now - c["fail_at"] < MODEL_RETRY_AFTER:
+        return c
     try:
-        return await llm_create(client, **{**kw, "model": primary})
-    except groq.APIStatusError as exc:
-        if not _is_capacity_error(exc) or primary == secondary:
-            raise
-        log.warning("%s returned %s; retrying once with %s.", primary, exc.status_code, secondary)
-        retry = {k: v for k, v in kw.items() if k != "extra_body"}
-        retry["model"] = secondary
-        return await llm_create(client, **retry)
+        listing = await client.models.list()
+        meta: Dict[str, Any] = {}
+        for m in getattr(listing, "data", None) or []:
+            mid = str(getattr(m, "id", "") or "")
+            if not mid or getattr(m, "active", True) is False:
+                continue
+            meta[mid] = {"owned_by": getattr(m, "owned_by", None), "context_window": getattr(m, "context_window", None)}
+        ids = list(meta)
+        chat_ids = [m for m in ids if not any(k in m.lower() for k in _NON_CHAT)]
+        vision = [m for m in chat_ids if any(k in m.lower() for k in _VISION_HINTS)]
+        text = rank_text_models([m for m in chat_ids if m not in vision])
+        if not text:
+            raise ValueError("the account lists no active text models")
+        c.update(at=now, fail_at=0.0, text=text, vision=vision, meta=meta, verified=True)
+        log.info("Groq models discovered: text=%s vision=%s", text, vision)
+    except (groq.APIError, ValueError, AttributeError, HTTPException) as exc:
+        log.warning("Model discovery failed (%s: %s); using %s.", type(exc).__name__, exc,
+                    "the previous list" if c["text"] else "the static fallback list")
+        c["fail_at"] = now
+        if not c["text"]:
+            c.update(text=_static_models(), vision=[vision_model_name()], meta={}, verified=False)
+    return c
+
+
+def reset_model_state() -> None:
+    _models_cache.update(at=0.0, fail_at=0.0, text=[], vision=[], meta={}, verified=False)
+    _dead_models.clear()
+    _tpm_limits.clear()
+
+
+def clean_model_id(value: Optional[str]) -> Optional[str]:
+    v = (value or "").strip()
+    return v if v and v.lower() != "auto" and re.fullmatch(r"[A-Za-z0-9._/:\-]{1,100}", v) else None
+
+
+async def model_chain(client, preferred: Optional[str] = None) -> List[str]:
+    info = await discover_models(client)
+    chain = [m for m in info["text"] if m not in _dead_models]
+    pref = clean_model_id(preferred) or ANALYZE_MODEL or None
+    if pref and pref in chain:
+        chain.remove(pref)
+        chain.insert(0, pref)
+    return chain or _static_models()
+
+
+def _est_tokens(messages: List[dict]) -> int:
+    n = 0
+    for m in messages:
+        c = m.get("content")
+        n += len(c) if isinstance(c, str) else 600 * len(c or [])
+    return int(n / 3.2) + 12 * len(messages)
+
+
+def _learn_limit(model: str, exc: groq.APIStatusError) -> None:
+    if exc.status_code != 413:
+        return
+    m = re.search(r"limit\s*(\d{3,7})", str(_error_body(exc).get("message") or exc), re.I)
+    if m:
+        _tpm_limits[model] = int(m.group(1))
+
+
+def _is_fallback_error(exc: groq.APIStatusError) -> bool:
+    """404 (model not found), 413 (too large for this model), 429 (rate limit) or a dead/decommissioned model."""
+    return exc.status_code in (404, 413, 429) or _is_model_problem(exc)
+
+
+async def _create_chat_completion_with_fallback(client, **kw):
+    """Try the ranked live models in turn; 404 / 413 / 429 (after every key has been tried) moves to the next.
+
+    kw["model"] is an optional preference (the user's dropdown choice) that is tried first. Models whose learned
+    token limit cannot hold this request (prompt + max_completion_tokens) are tried last, not first.
+    """
+    preferred = kw.pop("model", None)
+    chain = await model_chain(client, preferred)
+    need = _est_tokens(kw.get("messages") or []) + int(kw.get("max_completion_tokens") or 0)
+    viable = [m for m in chain if _tpm_limits.get(m, 10**9) >= need]
+    chain = viable + [m for m in chain if m not in viable]
+    errors: List[groq.APIStatusError] = []
+    for model in chain[:MAX_MODEL_TRIES]:
+        try:
+            resp = await llm_create(client, **{**kw, "model": model})
+            last_model_used.set(model)
+            return resp
+        except groq.APIStatusError as exc:
+            if not _is_fallback_error(exc):
+                raise
+            errors.append(exc)
+            _learn_limit(model, exc)
+            if exc.status_code == 404 or (exc.status_code == 400 and _is_model_problem(exc)):
+                _dead_models.add(model)
+            log.warning("%s answered %s; trying the next live model.", model, exc.status_code)
+            kw.pop("extra_body", None)
+    for e in errors:                       # prefer reporting the rate limit over a size / not-found error
+        if e.status_code == 429:
+            raise e
+    raise errors[-1] if errors else HTTPException(502, "No Groq text model is available on this account.")
 
 
 def repair_latex_escapes(raw: str) -> str:
@@ -1168,19 +1378,79 @@ def _fix_control_chars(obj):
     return obj
 
 
-def parse_json_loose(text: str) -> dict:
-    """Parse JSON even if the model wrapped it in fences, added stray text, or left LaTeX unescaped."""
-    cleaned = repair_latex_escapes(strip_fences(text))
-    try:
-        data = json.loads(cleaned)
-    except json.JSONDecodeError:
-        start, end = cleaned.find("{"), cleaned.rfind("}")
-        if start == -1 or end <= start:
-            raise
-        data = json.loads(cleaned[start : end + 1])
-    if not isinstance(data, dict):
-        raise ValueError("top-level JSON value must be an object")
-    return _fix_control_chars(data)
+_THINK_RE = re.compile(r"<think>[\s\S]*?</think>", re.I)
+
+
+def strip_think(text: str) -> str:
+    t = _THINK_RE.sub("", text or "")
+    if "</think>" in t:                          # opening tag was cut off
+        t = t.split("</think>", 1)[1]
+    return t.replace("<think>", "") if "<think>" in t and "</think>" not in t and t.count("{") == 0 else t
+
+
+def _scan_json(body: str):
+    """String-aware scan. Returns (end_index_of_first_complete_object or None, [(comma_pos, closers)], closers_at_end, in_string)."""
+    stack: List[str] = []
+    commas: List[tuple] = []
+    in_str = esc = False
+    for i, ch in enumerate(body):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch in "{[":
+            stack.append("}" if ch == "{" else "]")
+        elif ch in "}]":
+            if stack:
+                stack.pop()
+            if not stack:
+                return i, commas, "", False
+        elif ch == "," and stack:
+            commas.append((i, "".join(reversed(stack))))
+    return None, commas, "".join(reversed(stack)), in_str
+
+
+def _extract_and_repair_json(raw: str) -> dict:
+    """Pull the JSON object out of a model reply and repair the usual damage, so json_validate_failed cannot occur.
+
+    Handles: <think> blocks, ``` fences, prose before/after, unescaped LaTeX backslashes, raw newlines inside
+    strings, trailing commas, and output cut off by the token limit (open strings / arrays / objects are closed).
+    """
+    text = strip_fences(strip_think(raw))
+    start = text.find("{")
+    if start == -1:
+        raise json.JSONDecodeError("no JSON object found in the reply", text, 0)
+    body = repair_latex_escapes(text[start:])
+    end, commas, closers, in_str = _scan_json(body)
+    if end is not None:
+        body = body[: end + 1]
+    attempts = [body, re.sub(r",\s*([}\]])", r"\1", body)]
+    if end is None:                              # truncated: close what is open, else cut back to an earlier comma
+        tail = body.rstrip()
+        tail = tail + '"' if in_str else tail
+        tail = re.sub(r"[,:]\s*$", lambda m: ": null" if m.group(0).strip() == ":" else "", tail)
+        attempts.append(tail + closers)
+        for pos, cl in reversed(commas[-60:]):
+            attempts.append(body[:pos] + cl)
+    last: Optional[Exception] = None
+    for cand in attempts:
+        try:
+            data = json.loads(cand, strict=False)
+        except json.JSONDecodeError as exc:
+            last = exc
+            continue
+        if isinstance(data, dict):
+            return _fix_control_chars(data)
+    raise last or ValueError("top-level JSON value must be an object")
+
+
+parse_json_loose = _extract_and_repair_json      # backwards-compatible name
 
 
 def describe_validation(exc: Exception) -> str:
@@ -1195,17 +1465,28 @@ def describe_validation(exc: Exception) -> str:
     return str(exc)
 
 
-async def run_llm_json(system: str, prompt: str, schema: type[BaseModel], model: Optional[str] = None) -> BaseModel:
-    """Call Groq in JSON mode, validate with Pydantic, and feed errors back for up to 3 attempts."""
+JSON_ONLY_NOTE = (
+    "\n\nOUTPUT FORMAT: reply with ONE valid JSON object and nothing else: no prose, no markdown fences. "
+    "Escape every double quote, backslash and line break inside strings (write LaTeX backslashes doubled)."
+)
+
+
+async def run_llm_json(system: str, prompt: str, schema: type[BaseModel], model: Optional[str] = None,
+                       budget: float = REQUEST_DEADLINE) -> BaseModel:
+    """Ask Groq for a JSON object, repair + validate it with Pydantic, and feed errors back for up to 3 attempts.
+
+    No response_format / JSON mode is used (Groq rejects the whole call with json_validate_failed if the model slips
+    once); our own repair helper does the extraction instead. The model chain, key rotation and 404/413/429 fallback
+    all live in _create_chat_completion_with_fallback.
+    """
     client = get_client()
-    messages = [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
+    messages = [{"role": "system", "content": system + JSON_ONLY_NOTE}, {"role": "user", "content": prompt}]
     last_reason = "unknown error"
-    model = model or ANALYZE_MODEL
     started = asyncio.get_running_loop().time()
 
     for attempt in range(1, MAX_JSON_ATTEMPTS + 1):
         raw = ""
-        remaining = REQUEST_DEADLINE - (asyncio.get_running_loop().time() - started)
+        remaining = budget - (asyncio.get_running_loop().time() - started)
         if remaining < 6:
             raise HTTPException(
                 504, "The analysis is taking too long. Please try again, or use a shorter document "
@@ -1217,26 +1498,24 @@ async def run_llm_json(system: str, prompt: str, schema: type[BaseModel], model:
                 model=model,
                 timeout=min(GROQ_TIMEOUT, remaining),
                 messages=messages,
-                response_format={"type": "json_object"},
                 temperature=0.3,
                 max_completion_tokens=MAX_JSON_TOKENS,
             )
             choice = resp.choices[0]
             raw = choice.message.content or ""
-            if not raw.strip():
+            if not strip_think(raw).strip():
                 raise ValueError("the model returned an empty response")
-            if choice.finish_reason == "length":
-                raise ValueError("the output was cut off (token limit reached); be more concise")
-            return schema.model_validate(parse_json_loose(raw))
+            try:
+                return schema.model_validate(_extract_and_repair_json(raw))
+            except (json.JSONDecodeError, ValidationError, ValueError):
+                if choice.finish_reason == "length":
+                    raise ValueError("the output was cut off (token limit reached); be more concise")
+                raise
         except groq.BadRequestError as exc:
             if _error_body(exc).get("code") == "json_validate_failed" and attempt < MAX_JSON_ATTEMPTS:
                 last_reason = "Groq could not generate valid JSON"
                 log.warning("json_validate_failed (attempt %d)", attempt)
-                messages.append({
-                    "role": "user",
-                    "content": "Your previous reply was not valid JSON. Return ONLY the complete JSON object, "
-                    "escaping all quotes, backslashes and line breaks inside strings.",
-                })
+                messages.append({"role": "user", "content": "Your previous reply was not valid JSON. Return ONLY the complete JSON object."})
                 continue
             raise groq_http_error(exc)
         except groq.APIError as exc:
@@ -1285,13 +1564,13 @@ def sse(payload: object) -> str:
     return "data: " + (payload if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False)) + "\n\n"
 
 
-async def open_chat_stream(system: str, turns: List[dict]):
+async def open_chat_stream(system: str, turns: List[dict], model: Optional[str] = None):
     """Open the Groq stream up-front so connection/auth errors become normal HTTP errors."""
     client = get_client()
     try:
         return await _create_chat_completion_with_fallback(
             client,
-            model=MODEL,
+            model=model,
             messages=[{"role": "system", "content": system}] + turns,
             temperature=0.4,
             max_completion_tokens=3072,
@@ -1303,11 +1582,18 @@ async def open_chat_stream(system: str, turns: List[dict]):
 
 async def chat_event_stream(stream):
     sent = 0
+    thinking = False                      # swallow any <think>...</think> block a reasoning model might stream
     try:
         async for chunk in stream:
             if not getattr(chunk, "choices", None):
                 continue
             token = getattr(chunk.choices[0].delta, "content", None)  # reasoning tokens live elsewhere
+            if token and ("<think>" in token or thinking):
+                if "</think>" in token:
+                    token, thinking = token.split("</think>", 1)[1], False
+                else:
+                    thinking = True
+                    token = token.split("<think>", 1)[0] if not thinking or "<think>" in token else ""
             if token:
                 sent += 1
                 yield sse({"token": token})
@@ -1347,8 +1633,11 @@ def _is_model_problem(exc: groq.APIStatusError) -> bool:
 
 async def resolve_vision_model(client: groq.AsyncGroq, exclude: set) -> Optional[str]:
     """Pick any active scout / maverick / vision model from client.models.list()."""
-    listing = await client.models.list()
-    ids = [m.id for m in getattr(listing, "data", []) if getattr(m, "active", True) and m.id not in exclude]
+    info = await discover_models(client)
+    ids = [m for m in info["vision"] if m not in exclude] if info["verified"] else []
+    if not ids:                                   # cache empty or discovery failed: ask Groq directly
+        listing = await client.models.list()
+        ids = [m.id for m in getattr(listing, "data", []) if getattr(m, "active", True) and m.id not in exclude]
     for key in ("scout", "maverick", "vision"):
         for mid in ids:
             if key in mid.lower():
@@ -1441,7 +1730,7 @@ async def vision_transcribe(client: groq.AsyncGroq, data: bytes, filename: str, 
 
 
 def extract_pdf_text(data: bytes, budget: Optional[int] = None) -> str:
-    budget = budget or MAX_PROMPT_CHARS
+    budget = budget or MAX_TOTAL_CHARS
     try:
         reader = PdfReader(io.BytesIO(data))
         if reader.is_encrypted:
@@ -1612,6 +1901,89 @@ def compose_material(sources: List[Source]) -> str:
     return "\n\n".join(parts)
 
 
+NOTES_SYSTEM = (
+    "You are a meticulous note-taker for engineering and science lectures. You receive ONE PART of a longer document. "
+    "Extract ONLY what a student must keep: key formulas (LaTeX in $...$, exact symbols and numbers), theorems and laws "
+    "(with their conditions), definitions, and the worked steps or methods of any exercise. Keep the order in which they appear. "
+    "Reply with compact plain-text bullet notes, at most 350 words, no JSON, no preamble. Write in the document's own language."
+)
+NOTES_CAP = 3_000            # chars kept per part (3 parts -> the final prompt carries <= 9,000 chars of notes)
+
+
+def split_chunks(text: str, size: int = MAX_CHUNK_CHARS, max_chunks: int = MAX_CHUNKS) -> List[str]:
+    """Split into at most `max_chunks` balanced parts of <= `size` chars, cutting at paragraph / line / word breaks.
+    Text beyond size*max_chunks is condensed first (head 65% + tail 35%) so the conclusion survives."""
+    text = text.strip()
+    if len(text) <= size:
+        return [text]
+    if len(text) > size * max_chunks:
+        text = balanced_slice(text, size * max_chunks)
+    n = min(max_chunks, -(-len(text) // size))
+    target = -(-len(text) // n)
+    chunks: List[str] = []
+    pos = 0
+    for _ in range(n - 1):
+        end = pos + target
+        lo, hi = pos + int(target * 0.7), min(pos + size, end + int(target * 0.1))
+        cut = -1
+        for sep in ("\n\n", "\n", " "):
+            cut = text.rfind(sep, lo, hi)
+            if cut != -1:
+                break
+        if cut <= pos:
+            cut = min(end, pos + size)
+        chunks.append(text[pos:cut].strip())
+        pos = cut
+    chunks.append(text[pos:].strip())
+    return [c if len(c) <= size else balanced_slice(c, size) for c in chunks if c]
+
+
+async def extract_notes(client, chunk: str, idx: int, total: int, model: Optional[str]) -> str:
+    """Map step: one compact, non-JSON extraction pass over one part of the document."""
+    resp = await _create_chat_completion_with_fallback(
+        client,
+        model=model,
+        timeout=min(GROQ_TIMEOUT, MAP_BUDGET),
+        messages=[
+            {"role": "system", "content": NOTES_SYSTEM},
+            {"role": "user", "content": f"PART {idx} of {total}. Extract the key formulas, theorems, definitions and steps.\n\n<part>\n{chunk}\n</part>"},
+        ],
+        temperature=0.2,
+        max_completion_tokens=NOTES_MAX_TOKENS,
+    )
+    return strip_think(resp.choices[0].message.content or "").strip()
+
+
+async def map_reduce_material(client, material: str, model: Optional[str] = None) -> tuple:
+    """Return (condensed_material, n_parts). The notes of up to 3 parallel passes replace the raw text, so the final
+    JSON request stays far below every model's token limit (no more 413). If the notes pass fails, falls back to a
+    head + tail excerpt of each part, and finally to one balanced slice."""
+    chunks = split_chunks(material)
+    if len(chunks) == 1:
+        return chunks[0], 1
+    tasks = [asyncio.create_task(extract_notes(client, c, i, len(chunks), model)) for i, c in enumerate(chunks, start=1)]
+    _, pending = await asyncio.wait(tasks, timeout=MAP_BUDGET)
+    for t in pending:
+        t.cancel()
+    notes: List[str] = []
+    ok = 0
+    for i, (t, c) in enumerate(zip(tasks, chunks), start=1):
+        txt = ""
+        if t.done() and not t.cancelled() and t.exception() is None:
+            txt = t.result()
+        elif t.done() and not t.cancelled():
+            log.warning("Notes pass %d/%d failed: %s", i, len(chunks), _squash(t.exception(), 160))
+        if len(txt) >= 40:
+            ok += 1
+            txt = txt[:NOTES_CAP]
+        else:
+            txt = balanced_slice(c, NOTES_CAP)            # raw excerpt keeps this part represented
+        notes.append(f"=== PART {i} of {len(chunks)} (key points) ===\n{txt}")
+    if not ok:                                            # nothing could be extracted: one balanced slice, one request
+        return balanced_slice(material, MAX_CHUNK_CHARS), 1
+    return "\n\n".join(notes), len(chunks)
+
+
 def finalize_formulas(items: List[FormulaItem], limit: int = 10) -> List[FormulaItem]:
     """Sort by the model's order (stable), drop exact duplicates, renumber 1..n and keep the title prefix in sync."""
     items = sorted(items, key=lambda f: (f.order if f.order > 0 else 10_000))
@@ -1722,7 +2094,8 @@ async def favicon():
 async def health(deep: bool = False):
     """Add ?deep=true to make a 1-token live call to Groq and report the exact result."""
     info = {
-        "status": "ok", "provider": "groq", "model": MODEL, "vision_model": vision_model_name(),
+        "status": "ok", "provider": "groq", "model": (_models_cache["text"] or [MODEL])[0], "vision_model": vision_model_name(),
+        "keys": len(api_keys()),
         "api_key_configured": bool(api_key()), "env_file": ENV_FILE, "tts": edge_tts is not None,
     }
     if deep:
@@ -1730,17 +2103,39 @@ async def health(deep: bool = False):
             info.update(reachable=False, error="GROQ_API_KEY is not configured.")
         else:
             try:
-                await llm_create(get_client(), model=MODEL, messages=[{"role": "user", "content": "ping"}], max_completion_tokens=16)
+                await _create_chat_completion_with_fallback(get_client(), messages=[{"role": "user", "content": "ping"}], max_completion_tokens=16)
+                info["model_used"] = last_model_used.get() or None
                 info["reachable"] = True
             except groq.APIError as exc:
                 info.update(reachable=False, error=groq_http_error(exc).detail)
     return info
 
 
+@app.get("/api/models")
+async def models_endpoint(refresh: bool = False):
+    """Text / vision models that are ACTIVE on the user's Groq account (client.models.list(), cached in memory).
+    `models` is empty unless the list was verified live; the UI then offers only "Auto"."""
+    keys = len(api_keys())
+    if not keys:
+        return {"models": [], "vision": [], "default": None, "verified": False, "keys": 0,
+                "detail": "GROQ_API_KEY / GROQ_API_KEYS is not configured."}
+    info = await discover_models(get_client(), force=refresh)
+    meta = info["meta"]
+    live = [m for m in info["text"] if m not in _dead_models] if info["verified"] else []
+    return {
+        "models": [{"id": m, "context_window": (meta.get(m) or {}).get("context_window"),
+                    "owned_by": (meta.get(m) or {}).get("owned_by")} for m in live],
+        "vision": list(info["vision"]) if info["verified"] else [],
+        "default": live[0] if live else None,
+        "verified": bool(info["verified"]), "keys": keys,
+    }
+
+
 @app.post("/api/analyze")
 async def analyze(
     text: Optional[str] = Form(None),
     domain: str = Form("stem"),                 # "stem" | "humanities" | "general"
+    model: Optional[str] = Form(None),          # optional dropdown choice (must be a live model; "auto" = ranked chain)
     files: List[UploadFile] = File(None),
     file: Optional[UploadFile] = File(None),   # legacy single-file field
 ):
@@ -1759,8 +2154,18 @@ async def analyze(
     if total_chars < MIN_TEXT_CHARS:
         raise HTTPException(400, "The material is too short to analyze. Please provide at least a few sentences.")
 
-    truncated = allocate_budget(sources, MAX_PROMPT_CHARS)
+    started = time.monotonic()
     material = compose_material(sources)
+    truncated = len(material) > MAX_TOTAL_CHARS          # only material beyond 3 chunks is actually cut (head + tail kept)
+    n_parts = 1
+    if len(material) > MAX_CHUNK_CHARS:                  # long lecture: map (notes per chunk) then reduce (final JSON)
+        material, n_parts = await map_reduce_material(get_client(), material, model)
+        if n_parts > 1:
+            warnings.append(f"Long document: analyzed in {n_parts} parts (key formulas, theorems, definitions and steps "
+                            "were extracted from each part, then merged into one study guide).")
+    else:
+        truncated = allocate_budget(sources, MAX_CHUNK_CHARS) or truncated
+        material = compose_material(sources)
     note = ""
     if len(sources) > 1:
         note = (
@@ -1771,7 +2176,8 @@ async def analyze(
         f"{DOMAIN_NOTES[domain]}\n\n"
         f"Analyze the following academic material and return the JSON object described.{note}\n\n<material>\n{material}\n</material>"
     )
-    result = await run_llm_json(PAPER_SYSTEM, prompt, PaperAnalysis)
+    result = await run_llm_json(PAPER_SYSTEM, prompt, PaperAnalysis, model=model,
+                                budget=max(15.0, REQUEST_DEADLINE - (time.monotonic() - started)))
 
     result.vocabulary = result.vocabulary[:8]  # type: ignore[attr-defined]
     result.quiz = result.quiz[:3]  # type: ignore[attr-defined]
@@ -1786,7 +2192,9 @@ async def analyze(
     payload = result.model_dump()
     payload["domain"] = domain
     payload["truncated"] = truncated
-    payload["characters_analyzed"] = sum(len(s.text) for s in sources)
+    payload["characters_analyzed"] = total_chars
+    payload["chunks"] = n_parts
+    payload["model_used"] = last_model_used.get() or None
     payload["sources"] = sources_meta(sources)
     payload["warnings"] = warnings
     payload["context"] = build_paper_context(result, material, domain)  # type: ignore[arg-type]
@@ -1797,6 +2205,7 @@ async def analyze(
 async def explain_code(
     code: Optional[str] = Form(None),
     language: Optional[str] = Form(None),
+    model: Optional[str] = Form(None),
     files: List[UploadFile] = File(None),   # optional code / whiteboard screenshots
 ):
     uploads = await _read_uploads(files)
@@ -1828,12 +2237,13 @@ async def explain_code(
         "Line numbers are prefixed for reference only; do not include the prefixes in \"code\".\n"
         f"{hint}\n{numbered}"
     )
-    result = await run_llm_json(CODE_SYSTEM, prompt, CodeAnalysis)
+    result = await run_llm_json(CODE_SYSTEM, prompt, CodeAnalysis, model=model)
     result.mermaid_code = finalize_mermaid(  # type: ignore[attr-defined]
         result.mermaid_code, [f"Lines {b.lines}" for b in result.line_by_line]  # type: ignore[attr-defined]
     )
     payload = result.model_dump()
     payload["truncated"] = truncated
+    payload["model_used"] = last_model_used.get() or None
     payload["sources"] = sources_meta(sources)
     payload["warnings"] = warnings
     payload["context"] = build_code_context(result, combined)  # type: ignore[arg-type]
@@ -1860,7 +2270,7 @@ async def english_lab(req: LabRequest):
         verb = "Deconstruct this sentence for a student" if req.mode == "deconstruct" else "Upgrade this draft"
         prompt = f"{verb}. Student's CEFR level / target: {level_note}.\n<student_text>\n{text}\n</student_text>"
 
-    result = await run_llm_json(system, prompt, schema)
+    result = await run_llm_json(system, prompt, schema, model=req.model)
     if req.mode == "deconstruct" and not result.original.strip():  # type: ignore[attr-defined]
         result.original = text  # type: ignore[attr-defined]
     if req.mode == "level_lesson":
@@ -1965,7 +2375,7 @@ async def chat(req: ChatRequest):
         raise HTTPException(400, "No document context is available. Run an analysis first.")
 
     system = f"{CHAT_SYSTEM}\n\n<context>\n{context}\n</context>"
-    stream = await open_chat_stream(system, build_turns(req.history, question))
+    stream = await open_chat_stream(system, build_turns(req.history, question), req.model)
     return StreamingResponse(
         chat_event_stream(stream),
         media_type="text/event-stream",
