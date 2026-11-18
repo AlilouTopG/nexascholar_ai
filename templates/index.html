@@ -494,6 +494,14 @@
     .caret { display:none !important; }
   }
 
+  /* ---- live model picker (top bar) ---- */
+  .model-chip { display:inline-flex; align-items:center; gap:.4rem; border:1px solid var(--line); background:var(--fill); border-radius:999px; padding:.15rem .35rem .15rem .7rem; max-width:15rem; min-width:0; color:var(--muted); transition:border-color .15s, box-shadow .2s; }
+  .model-chip:hover, .model-chip:focus-within { border-color:var(--em); box-shadow:0 0 16px -6px var(--em-glow); }
+  .model-select { background:transparent; border:0; outline:0; color:var(--text-h); font:600 .72rem 'JetBrains Mono',monospace; min-width:0; max-width:100%; text-overflow:ellipsis; cursor:pointer; padding:.3rem .2rem; color-scheme:dark; }
+  .model-select option { background:#0B1220; color:#E2E8F0; }
+  .model-select:disabled { opacity:.6; cursor:progress; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
   /* =====================================================================
      v5: sidebar navigation, dashboard, domain pills, register toggle,
      lexicon ESP fields, English Proficiency Wing
@@ -722,7 +730,9 @@
     h2.title-grad { font-size:1.4rem; }
   }
   @media (max-width:480px) {
-    #model-chip, #cefr-chip { display:none !important; }
+    #cefr-chip { display:none !important; }
+    .model-chip { max-width:9.5rem; }
+    #install-label { display:none; }
     .stat-grid { gap:.6rem; } .stat { padding:.8rem .85rem; }
     .stat .l { font-size:.7rem; }
   }
@@ -1101,9 +1111,11 @@ body.print-lesson .levelup { display:none !important; }
       <button id="cefr-chip" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold border border-line rounded-full px-3 py-1 hover:border-amber transition" title="Target CEFR level (click to change)">
         <i data-lucide="target" class="w-3.5 h-3.5 text-amber"></i>Target <b id="cefr-chip-v" class="font-mono text-amber">B2</b>
       </button>
-      <span id="model-chip" class="hidden md:inline-flex items-center gap-1.5 text-xs font-mono text-slate-500 border border-line rounded-full px-3 py-1 max-w-[220px]" title="Language model">
-        <i data-lucide="cpu" class="w-3.5 h-3.5 shrink-0"></i><span class="truncate" id="model-name">AI model</span>
-      </span>
+      <label id="model-chip" class="model-chip" title="Language model (live from your Groq account)">
+        <i data-lucide="cpu" class="w-3.5 h-3.5 shrink-0"></i>
+        <span class="sr-only">AI model</span>
+        <select id="model-select" aria-label="AI model" class="model-select"><option value="auto">Auto (best available)</option></select>
+      </label>
     </header>
 
     <main id="main-scroll" class="flex-1 overflow-y-auto">
@@ -2785,7 +2797,7 @@ async function sendChat(ws, text) {
   const ctrl = new AbortController(); w.abort = ctrl;
   let acc = '', pending = false;
   try {
-    await streamChat({ context: s.context || '', question: q, history }, ctrl.signal, tok => {
+    await streamChat({ context: s.context || '', question: q, history, model: pickedModel() }, ctrl.signal, tok => {
       acc += tok;
       if (!pending && live()) { pending = true; requestAnimationFrame(() => { pending = false; if (live()) { textEl.textContent = acc; toBottom(); } }); }
     });
@@ -2848,6 +2860,7 @@ async function runPaper() {
   w.files.forEach(f => fd.append('files', f, f.name));
   if (text) fd.append('text', text);
   fd.append('domain', W.paper.domain);
+  if (pickedModel()) fd.append('model', pickedModel());
   const hasImg = w.files.some(f => fileKind(f.name) === 'image');
   const label = w.files.length ? (w.files.length === 1 ? w.files[0].name : w.files.length + ' files') + (text ? ' + pasted text' : '') : 'Pasted text';
   const msgs = ['Extracting document text...'];
@@ -2858,7 +2871,7 @@ async function runPaper() {
     const { context, ...data } = d;
     addSession('paper', { id: uid(), type: 'paper', title: data.title || 'Untitled analysis', createdAt: Date.now(), source: label, domain: data.domain || W.paper.domain, context, data, chat: [], answers: {}, mastered: {} });
     notifyWarnings(d);
-    toast(data.truncated ? 'Analysis complete. Long material: it was trimmed to fit the model budget.' : 'Analysis complete.', 'success');
+    toast(data.truncated ? 'Analysis complete. Very long material: the middle was condensed (the start and the end were kept).' : 'Analysis complete.', 'success');
   });
 }
 
@@ -2869,6 +2882,7 @@ async function runCode() {
   const fd = new FormData();
   fd.append('code', code);
   fd.append('language', langInfo(w.lang).l);
+  if (pickedModel()) fd.append('model', pickedModel());
   w.files.forEach(f => fd.append('files', f, f.name));
   const lines = code.trim() ? code.split('\n').length : 0;
   const label = [lines ? lines + (lines === 1 ? ' line' : ' lines') : '', w.files.length ? w.files.length + (w.files.length === 1 ? ' screenshot' : ' screenshots') : ''].filter(Boolean).join(' + ');
@@ -3043,8 +3057,42 @@ $('#presets').innerHTML = PRESETS.map(p => `<button type="button" class="preset"
 edRefresh();
 renderChips('paper'); renderChips('code');
 renderEmpty('paper'); renderEmpty('code');
+/* =====================================================================
+   Live model picker: only models that /api/models verified on the user's Groq account are listed.
+   "auto" (the default) lets the server walk its ranked chain and fall back on 404 / 413 / 429.
+   ===================================================================== */
+const MODEL_KEY = 'nexa.model';
+const modelState = { models: [], verified: false, default: null, vision: [] };
+function pickedModel() { const v = ($('#model-select') || {}).value; return v && v !== 'auto' ? v : ''; }
+function modelLabel(m) {
+  const id = m.id || m, cw = m.context_window;
+  return id + (cw ? ' · ' + (cw >= 1000 ? Math.round(cw / 1000) + 'k' : cw) : '');
+}
+function renderModelSelect() {
+  const sel = $('#model-select'); if (!sel) return;
+  let saved = ''; try { saved = localStorage.getItem(MODEL_KEY) || ''; } catch (e) { /* storage blocked */ }
+  const auto = modelState.default ? 'Auto (best: ' + modelState.default + ')' : 'Auto (best available)';
+  sel.innerHTML = '<option value="auto">' + esc(auto) + '</option>' +
+    modelState.models.map(m => '<option value="' + esc(m.id) + '">' + esc(modelLabel(m)) + '</option>').join('');
+  sel.value = modelState.models.some(m => m.id === saved) ? saved : 'auto';     // a model that is no longer live is forgotten
+  sel.disabled = false;
+  $('#model-chip').title = modelState.verified
+    ? 'Language model. ' + modelState.models.length + ' active model(s) found on your Groq account' + (modelState.vision.length ? ' · Vision: ' + modelState.vision[0] : '')
+    : 'Language model. Could not list your Groq models, so Auto is used.';
+}
+async function loadModels(refresh) {
+  const sel = $('#model-select'); if (sel) sel.disabled = true;
+  try {
+    const r = await fetch('/api/models' + (refresh ? '?refresh=true' : ''), { signal: AbortSignal.timeout ? AbortSignal.timeout(API_TIMEOUT) : undefined });
+    const d = await r.json();
+    if (d && Array.isArray(d.models)) Object.assign(modelState, { models: d.models, verified: !!d.verified, default: d.default || null, vision: d.vision || [] });
+  } catch (e) { /* offline or slow: keep Auto */ }
+  renderModelSelect();
+}
+$('#model-select').addEventListener('change', e => { try { localStorage.setItem(MODEL_KEY, e.target.value); } catch (err) { /* ignore */ } });
+loadModels(false);
+
 Promise.race([fetch('/api/health'), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), API_TIMEOUT))]).then(r => r.json()).then(h => {
-  if (h.model) { $('#model-name').textContent = h.model; $('#model-chip').title = 'Language model: ' + h.model + (h.vision_model ? ' · Vision: ' + h.vision_model : ''); }
   if (!h.api_key_configured) toast('GROQ_API_KEY is not configured. Copy .env.example to .env, add your key, then restart the server.', 'error', 10000);
 }).catch(() => {});
 
@@ -3372,7 +3420,7 @@ async function labRun() {
   if (text.length < m.min) return toast(t === 'deconstruct' ? 'Enter a sentence to deconstruct.' : 'Enter a draft of at least one sentence.', 'error');
   L.busy = t; renderLab();
   try {
-    const d = await postJSON('/api/english-lab', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: t, level: cefr, text }) });
+    const d = await postJSON('/api/english-lab', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: t, level: cefr, text, model: pickedModel() }) });
     L[t].result = d; if (t === 'level_lesson') L[t].answers = {};
     toast(t === 'level_lesson' ? 'Lesson ready.' : t === 'upgrade' ? 'Draft upgraded.' : 'Sentence deconstructed.', 'success');
   } catch (e) { toast(e.message, 'error', 9000); }
