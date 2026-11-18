@@ -1158,9 +1158,9 @@ body.print-lesson .levelup { display:none !important; }
               <div class="p-5">
                 <div class="text-xs font-semibold text-slate-500 mb-1.5">Subject area</div>
                 <div class="seg dom-seg" id="domain-seg" role="group" aria-label="Subject area">
-                  <button data-act="domain" data-domain="stem" class="active" title="Math, engineering, science">STEM</button>
+                  <button data-act="domain" data-domain="stem" title="Math, engineering, science">STEM</button>
                   <button data-act="domain" data-domain="humanities" title="Literature, law, economics">Humanities</button>
-                  <button data-act="domain" data-domain="general" title="Any other academic text">General</button>
+                  <button data-act="domain" data-domain="general" class="active" title="Any other academic text">General</button>
                 </div>
                 <label class="dropzone mt-4" data-dz="paper" for="file-paper">
                   <i data-lucide="cloud-upload" class="w-7 h-7 text-emerald mb-2"></i>
@@ -1903,11 +1903,19 @@ function persist() {
   return false;
 }
 
+/* Subject area (STEM / Humanities / General) is remembered under its own localStorage key. */
+const SUBJECT_KEY = 'nexascholar_subject_area';
+const SUBJECT_AREAS = ['stem', 'humanities', 'general'];
+function loadSubjectArea() {
+  const v = String(ls.get(SUBJECT_KEY) || '').trim().toLowerCase();
+  return SUBJECT_AREAS.includes(v) ? v : 'general';          // General only when nothing valid was saved
+}
+
 /* Each studio keeps its own active session, inputs, chat, diagram and deck state. */
 const state = { ws: 'dash', lab: ['deconstruct', 'upgrade', 'level_lesson'].includes(ls.get('nexascholar.lab')) ? ls.get('nexascholar.lab') : 'deconstruct' };
 const W = {
   paper: { activeId: null, files: [], busy: false, chatBusy: false, abort: null, deckIdx: 0, lex: ls.get('nexascholar.lex') === 'deck' ? 'deck' : 'grid', tick: null,
-           domain: ['stem', 'humanities', 'general'].includes(ls.get('nexascholar.domain')) ? ls.get('nexascholar.domain') : 'stem', reg: 'academic' },
+           domain: loadSubjectArea(), reg: 'academic' },
   code:  { activeId: null, files: [], busy: false, chatBusy: false, abort: null, lang: ls.get('nexascholar.lang') || 'auto', tick: null }
 };
 function activeSession(ws) { return sessions.find(s => s.id === W[ws].activeId) || null; }
@@ -2436,6 +2444,7 @@ function lexiconHtml(s) {
           </div>
           <div class="flex items-center gap-2"><span class="text-xs text-slate-500">Accent</span>
             <div class="seg"><button data-act="accent-set" data-accent-set="en-US">US</button><button data-act="accent-set" data-accent-set="en-GB">UK</button></div></div>
+          <button class="btn-ghost" data-act="anki-export" title="Download the flashcards as a CSV file that Anki (and Excel) can import"><i data-lucide="download" class="w-3.5 h-3.5"></i>Export to Anki (.csv)</button>
         </div>
       </div>
       <h3 class="font-bold mb-3 print-only">Technical English Lexicon</h3>
@@ -2587,7 +2596,7 @@ function codeHtml(s) {
     ${chatDrawer('code', s)}`;
 }
 
-function paintDomain() { $$('#domain-seg button').forEach(b => b.classList.toggle('active', b.dataset.domain === W.paper.domain)); }
+function paintDomain() { $$('#domain-seg button').forEach(b => { const on = b.dataset.domain === W.paper.domain; b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); }
 function paintReg() {
   const root = res('paper'), r = W.paper.reg;
   $$('.reg-pane', root).forEach(p => p.classList.toggle('hidden', p.dataset.reg !== r));
@@ -2740,6 +2749,36 @@ function deckMaster() {
   deckPaint(true);
   const i = W.paper.deckIdx, card = $(`.vocab-card[data-i="${i}"]`, res('paper'));
   if (card) { card.classList.toggle('mastered', !!s.mastered[key]); $('.mastered-badge', card)?.classList.toggle('hidden', !s.mastered[key]); }
+}
+/* ---- Anki export: Front,Back CSV with a UTF-8 BOM so Arabic, French accents and LaTeX survive Anki and Excel ---- */
+function csvCell(v) {
+  let t = String(v == null ? '' : v).replace(/\r\n?/g, '\n');
+  if (/^[=+\-@\t]/.test(t)) t = ' ' + t;                      // stops Excel from reading a card as a formula
+  return '"' + t.replace(/"/g, '""') + '"';
+}
+function ankiBack(x) {
+  const rows = [x.definition];
+  if (x.context_usage) rows.push('Example: ' + x.context_usage);
+  if (x.cefr_level) rows.push('Level: ' + String(x.cefr_level).toUpperCase());
+  if (x.arabic_equivalent) rows.push('AR: ' + x.arabic_equivalent);
+  if (x.french_equivalent) rows.push('FR: ' + x.french_equivalent);
+  if ((x.simpler_synonyms || []).length) rows.push('Simpler: ' + x.simpler_synonyms.join(', '));
+  if ((x.collocations || []).length) rows.push('Collocations: ' + x.collocations.join(', '));
+  if (x.word_family) rows.push('Word family: ' + x.word_family);
+  if (x.grammar_usage_note) rows.push('Grammar: ' + x.grammar_usage_note);
+  return rows.filter(Boolean).join('\n');
+}
+function buildAnkiCsv(vocab) {
+  return '\uFEFF' + vocab.map(x => csvCell(x.term) + ',' + csvCell(ankiBack(x))).join('\r\n') + '\r\n';
+}
+function exportAnki() {
+  const s = activeSession('paper'), v = s && s.data && s.data.vocabulary || [];
+  if (!v.length) return toast('There are no flashcards to export yet.', 'error');
+  const url = URL.createObjectURL(new Blob([buildAnkiCsv(v)], { type: 'text/csv;charset=utf-8' }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: (s.title ? slug(s.title) + '-anki-flashcards' : 'nexascholar-anki-flashcards') + '.csv' });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  toast(v.length + ' flashcards exported. In Anki: File > Import, then map Field 1 to Front and Field 2 to Back.', 'success', 7000);
 }
 function sayFromButton(btn) {
   const s = activeSession('paper'); if (!s) return;
@@ -2940,7 +2979,8 @@ function act(ws, name, el, e) {
     case 'brief-stop': return Brief.stop();
     case 'brief-rate': return Brief.setRate(Number(el.dataset.rate));
     case 'chat-toggle': return openChat(ws, !$('[data-chat]', res(ws)).classList.contains('open'));
-    case 'domain': W.paper.domain = el.dataset.domain; ls.set('nexascholar.domain', W.paper.domain); return paintDomain();
+    case 'domain': W.paper.domain = SUBJECT_AREAS.includes(el.dataset.domain) ? el.dataset.domain : 'general'; ls.set(SUBJECT_KEY, W.paper.domain); return paintDomain();
+    case 'anki-export': return exportAnki();
     case 'reg': Brief.stop(); W.paper.reg = el.dataset.reg; return paintReg();
     default: return labAct(name, el, e);
   }
@@ -3055,6 +3095,7 @@ $('#lang-code').innerHTML = LANGS.map(l => `<option value="${l.v}">${esc(l.l)}</
 $('#lang-code').value = langInfo(W.code.lang).v;
 $('#presets').innerHTML = PRESETS.map(p => `<button type="button" class="preset" data-act="preset" data-id="${p.id}">${esc(p.label)}</button>`).join('');
 edRefresh();
+paintDomain();                                            // restore the saved Subject area on the pills
 renderChips('paper'); renderChips('code');
 renderEmpty('paper'); renderEmpty('code');
 /* =====================================================================
