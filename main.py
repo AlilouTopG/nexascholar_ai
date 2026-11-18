@@ -112,6 +112,10 @@ REQUEST_DEADLINE = 50.0      # total budget for one JSON endpoint (Render's gate
 MAP_BUDGET = 22.0            # time allowed for the parallel "notes" pass on a long document
 PDF_TIMEOUT = 25.0           # PDF text extraction budget
 VISION_BUDGET = 40.0         # total budget for transcribing all uploaded images
+OCR_MAX_PAGES = 4            # scanned PDFs: only the first pages are rendered and read by the vision model
+OCR_DPI = 140                # render resolution (130-150 DPI keeps the JPEGs compact but legible)
+OCR_BUDGET = 30.0            # total seconds for the sequential page transcriptions
+OCR_MIN_TEXT = 100           # a PDF with fewer extracted characters is treated as scanned / image-only
 PDF_FULL_PAGES = 40          # longer PDFs: read the first and last pages only (conclusions matter, the middle is condensed)
 SCANNED_PDF_MSG = ("This PDF appears to be a scanned image with no selectable text. "
                    "Please upload a screenshot/photo of the page or paste the text directly.")
@@ -191,7 +195,7 @@ def vision_model_name() -> str:
     return os.getenv("GROQ_VISION_MODEL", DEFAULT_VISION_MODEL).strip() or DEFAULT_VISION_MODEL
 
 
-app = FastAPI(title="NexaScholar AI", version="3.7.0")
+app = FastAPI(title="NexaScholar AI", version="3.8.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -1036,6 +1040,14 @@ VISION_PAPER_PROMPT = (
     "If the image is unreadable, say so in one sentence."
 )
 
+VISION_SCAN_PROMPT = (
+    "This is one page of a scanned university document (page {n} of {total}). Transcribe ALL text on the page "
+    "in reading order: headings (as Markdown #), paragraphs, lists and tables (as Markdown). Write every "
+    "mathematical expression and formula as clean LaTeX, using $...$ inline and $$...$$ for display equations. "
+    "Describe any figure or circuit in one short line starting with 'Figure:'. Output only the transcription, "
+    "with no commentary. If the page is blank or unreadable, reply with exactly: [blank page]"
+)
+
 VISION_CODE_PROMPT = (
     "Transcribe the source code, pseudocode or ladder logic in this image verbatim, preserving indentation "
     "and line breaks. Output ONLY the code: no markdown fences and no commentary. If the image is a "
@@ -1685,7 +1697,13 @@ async def vision_transcribe(client: groq.AsyncGroq, data: bytes, filename: str, 
     global _vision_resolved
     img, mime = await asyncio.to_thread(prepare_image, data, filename)
     url = f"data:{mime};base64,{base64.b64encode(img).decode()}"
-    prompt = VISION_CODE_PROMPT if kind == "code" else VISION_PAPER_PROMPT
+    if kind == "code":
+        prompt = VISION_CODE_PROMPT
+    elif kind.startswith("scan"):                       # "scan:<page>:<total>" from the scanned-PDF OCR path
+        _, n, total = (kind.split(":") + ["1", "1"])[:3]
+        prompt = VISION_SCAN_PROMPT.format(n=n, total=total)
+    else:
+        prompt = VISION_PAPER_PROMPT
     model = _vision_resolved or vision_model_name()
     tried: set = set()
     for attempt in range(2):
@@ -1793,12 +1811,96 @@ async def _read_uploads(files: Optional[List[UploadFile]]) -> List[tuple]:
     return out
 
 
+def render_pdf_pages(data: bytes, max_pages: int = OCR_MAX_PAGES, dpi: int = OCR_DPI) -> tuple:
+    """Render the first pages of a PDF to compact JPEGs with pypdfium2. Returns ([jpeg_bytes], total_pages)."""
+    import pypdfium2 as pdfium                       # imported lazily: the rest of the app works without it
+
+    pdf = pdfium.PdfDocument(data)
+    try:
+        total = len(pdf)
+        pages: List[bytes] = []
+        for i in range(min(total, max_pages)):
+            page = pdf[i]
+            try:
+                img = page.render(scale=dpi / 72.0).to_pil().convert("RGB")
+            finally:
+                page.close()
+            img.thumbnail((1800, 1800))
+            quality = 72
+            while True:
+                buf = io.BytesIO()
+                img.save(buf, "JPEG", quality=quality, optimize=True)
+                if len(buf.getvalue()) * 4 / 3 <= MAX_VISION_B64_BYTES or quality <= 45:
+                    break
+                quality -= 10
+            pages.append(buf.getvalue())
+        return pages, total
+    finally:
+        pdf.close()
+
+
+async def ocr_scanned_pdf(client, name: str, data: bytes) -> tuple:
+    """OCR a scanned (image-only) PDF with the live Groq vision model. Returns (text, warning_or_None).
+
+    Renders up to OCR_MAX_PAGES pages, transcribes them one after another through vision_transcribe (which already
+    fails over between the live vision models), and joins the page texts. Raises HTTP 422 when pypdfium2 cannot
+    render the file or the account has no usable vision model."""
+    info = await discover_models(client)
+    if info["verified"] and not info["vision"]:
+        raise HTTPException(
+            422, f"{name} is an image-based (scanned) PDF, which needs a vision model to be read, but no active Groq "
+            "vision model is enabled on your account. Enable one (e.g. meta-llama/llama-4-scout-17b-16e-instruct) "
+            "or paste the text instead.")
+    try:
+        pages, total = await asyncio.to_thread(render_pdf_pages, data)
+    except Exception as exc:  # noqa: BLE001  (ImportError, PdfiumError, corrupt file ...)
+        log.warning("pypdfium2 could not render %s: %s", name, exc)
+        raise HTTPException(
+            422, f"{name} is an image-based (scanned) PDF and its pages could not be rendered for OCR "
+            f"({_squash(type(exc).__name__ + ': ' + str(exc), 100)}). Upload photos of the pages as images, or paste the text.")
+    if not pages:
+        raise HTTPException(422, f"{name} has no pages that could be rendered for OCR.")
+    texts: List[str] = []
+    deadline = time.monotonic() + OCR_BUDGET
+    for i, jpg in enumerate(pages, start=1):
+        left = deadline - time.monotonic()
+        if left < 4 and texts:
+            log.warning("OCR budget used up after %d/%d pages of %s", i - 1, len(pages), name)
+            break
+        try:
+            t = await asyncio.wait_for(vision_transcribe(client, jpg, f"{Path(name).stem}-page{i}.jpg", f"scan:{i}:{len(pages)}"), timeout=max(left, 4.0))
+        except asyncio.TimeoutError:
+            if texts:
+                break
+            raise HTTPException(504, f"Reading the scanned pages of {name} took too long. Try a shorter PDF, or paste the text.")
+        except HTTPException as exc:
+            if exc.status_code == 502 and "vision model" in str(exc.detail).lower():
+                raise HTTPException(
+                    422, f"{name} is an image-based (scanned) PDF and needs an active Groq vision model, but none "
+                    "is available on your account. Enable one, or paste the text instead.")
+            if texts:
+                break
+            raise
+        t = t.strip()
+        if t and t.lower() != "[blank page]":
+            texts.append(f"[Page {i}]\n{t}")
+    done = len(texts)
+    warn = None
+    if total > len(pages) or done < len(pages):
+        warn = (f"{name}: scanned PDF read with OCR. Only the first {min(len(pages), max(done, 1))} of {total} pages "
+                "were transcribed.")
+    else:
+        warn = f"{name}: scanned PDF read with OCR ({done} page{'s' if done != 1 else ''})."
+    return "\n\n".join(texts), warn
+
+
 async def collect_sources(uploads: List[tuple], pasted: Optional[str], kind: str, client_factory) -> tuple:
     """Turn uploads (+ pasted text) into labelled text sources. Returns (sources, warnings)."""
     sources: List[Source] = []
     warnings: List[str] = []
     image_jobs: List[tuple] = []
     scanned: List[str] = []
+    ocr_errors: List[HTTPException] = []
 
     for name, data in uploads:
         ext = Path(name).suffix.lower()
@@ -1815,8 +1917,20 @@ async def collect_sources(uploads: List[tuple], pasted: Optional[str], kind: str
                 raise HTTPException(
                     504, f"{name} took too long to read. Try a smaller PDF, or paste the text of the chapters you need."
                 )
-            if len(text.strip()) < 40:               # empty / near-empty: a scanned image PDF
-                scanned.append(name)
+            if len(text.strip()) < OCR_MIN_TEXT:      # (almost) no selectable text: a scanned image PDF -> vision OCR
+                try:
+                    ocr_text, ocr_warn = await ocr_scanned_pdf(client_factory(), name, data)
+                except HTTPException as exc:
+                    if exc.status_code == 504:
+                        raise
+                    ocr_errors.append(exc)
+                    continue
+                if len(ocr_text.strip()) < 40:        # even the vision model found nothing readable
+                    scanned.append(name)
+                    continue
+                if ocr_warn:
+                    warnings.append(ocr_warn)
+                sources.append(Source(name, "pdf", ocr_text))
                 continue
             if len(text) < MIN_TEXT_CHARS:
                 warnings.append(f"{name}: almost no readable text found. Upload page photos as images instead.")
@@ -1836,8 +1950,13 @@ async def collect_sources(uploads: List[tuple], pasted: Optional[str], kind: str
             allowed = "PNG, JPG, JPEG, WEBP" if kind == "code" else "PDF, PNG, JPG, JPEG, WEBP, TXT, MD"
             raise HTTPException(400, f"Unsupported file type: {name}. Supported: {allowed}.")
 
-    if scanned and not sources and not image_jobs and not (pasted and pasted.strip()):
+    nothing_else = not sources and not image_jobs and not (pasted and pasted.strip())
+    if ocr_errors and nothing_else:
+        raise ocr_errors[0]                                   # 422: scanned PDF that cannot be OCR'd (no vision model / render failure)
+    if scanned and nothing_else:
         raise HTTPException(400, SCANNED_PDF_MSG)            # fail fast: nothing to send to the model
+    for exc in ocr_errors:
+        warnings.append(str(exc.detail))
     for name in scanned:
         warnings.append(f"{name}: " + SCANNED_PDF_MSG)
 
@@ -2144,6 +2263,7 @@ async def analyze(
     if not uploads and not (text and text.strip()):
         raise HTTPException(400, "Please upload at least one file or paste some text.")
 
+    started = time.monotonic()
     sources, warnings = await collect_sources(uploads, text, "paper", get_client)
     if not sources:
         raise HTTPException(
@@ -2154,11 +2274,12 @@ async def analyze(
     if total_chars < MIN_TEXT_CHARS:
         raise HTTPException(400, "The material is too short to analyze. Please provide at least a few sentences.")
 
-    started = time.monotonic()
     material = compose_material(sources)
     truncated = len(material) > MAX_TOTAL_CHARS          # only material beyond 3 chunks is actually cut (head + tail kept)
     n_parts = 1
-    if len(material) > MAX_CHUNK_CHARS:                  # long lecture: map (notes per chunk) then reduce (final JSON)
+    if len(material) > MAX_CHUNK_CHARS and time.monotonic() - started > 30:
+        material, truncated = balanced_slice(material, MAX_CHUNK_CHARS), True     # slow OCR: no time left for a notes pass
+    elif len(material) > MAX_CHUNK_CHARS:                # long lecture: map (notes per chunk) then reduce (final JSON)
         material, n_parts = await map_reduce_material(get_client(), material, model)
         if n_parts > 1:
             warnings.append(f"Long document: analyzed in {n_parts} parts (key formulas, theorems, definitions and steps "
