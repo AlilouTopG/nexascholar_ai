@@ -502,6 +502,11 @@
   .model-select:disabled { opacity:.6; cursor:progress; }
   .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 
+  /* ---- Copilot action pill inside an assistant bubble ---- */
+  .action-pill { display:inline-flex; align-items:center; gap:.4rem; margin-top:.65rem; padding:.28rem .7rem; border-radius:999px; font:600 .72rem 'JetBrains Mono',monospace; border:1px solid var(--em); color:var(--em); background:rgba(16,185,129,.1); }
+  .action-pill.warn { border-color:var(--line); color:var(--muted); background:var(--fill); }
+  .action-pill i { flex:none; }
+
   /* =====================================================================
      v5: sidebar navigation, dashboard, domain pills, register toggle,
      lexicon ESP fields, English Proficiency Wing
@@ -2245,7 +2250,7 @@ async function postJSON(url, init, ms) {
 }
 
 /* Reads the /api/chat Server-Sent Events stream and calls onToken for every token. */
-async function streamChat(body, signal, onToken) {
+async function streamChat(body, signal, onToken, onAction) {
   const c = apiCtl(API_TIMEOUT, signal);               // 55 s to first byte, then 55 s of silence = stalled
   const stalled = () => new ApiTimeout('The answer stalled for ' + (API_TIMEOUT / 1000) + ' seconds. Try asking again, or ask a shorter question.');
   try {
@@ -2281,6 +2286,7 @@ async function streamChat(body, signal, onToken) {
           let j; try { j = JSON.parse(data); } catch (e) { continue; }
           if (j.error) throw new Error(j.error);
           if (j.token) onToken(j.token);
+          if (j.action && onAction) onAction({ action: j.action, target: j.action_target || null });
         }
       }
     }
@@ -2485,7 +2491,7 @@ function quizHtml(s) {
 function chatMsgHtml(m) {
   return m.role === 'user'
     ? `<div class="flex justify-end"><div class="bubble-u">${esc(m.content)}</div></div>`
-    : `<div class="flex gap-2"><div class="avatar">N</div><div class="bubble-a prose-nx">${mdMath(m.content)}</div></div>`;
+    : `<div class="flex gap-2"><div class="avatar">N</div><div class="bubble-a prose-nx">${mdMath(m.content)}${m.action ? actionPillHtml(m.action) : ''}</div></div>`;
 }
 function chatDrawer(ws, s) {
   const has = s.chat.length > 0;
@@ -2811,6 +2817,75 @@ function askNode(ws, label) {
   sendChat(ws, `Explain the step/concept '${label}' from the diagram in detail, including its mathematical/technical role and a concrete example.`);
 }
 
+/* =====================================================================
+   Copilot: full session context goes with every message, and the reply may carry a workspace command
+   ===================================================================== */
+const SOURCE_TEXT_MAX = 6500, SUMMARY_MAX = 2000;
+function activeStudioId(ws) { return ws === 'paper' ? 'paper' : ws === 'code' ? 'code' : (state.lab === 'level_lesson' ? 'cefr' : 'english'); }
+function sourceTitles(ws, s) {
+  const names = ((s.data && s.data.sources) || []).map(x => x && x.name).filter(Boolean);
+  if (!names.length && s.source) names.push(...String(s.source).split(/\s*[,;]\s*/));
+  return [...new Set(names)].slice(0, 10);
+}
+function analysisSummary(ws, s) {
+  const d = s.data || {}, out = [];
+  if (ws === 'paper') {
+    out.push('TITLE: ' + (s.title || d.title || ''));
+    if (d.summary) out.push('SUMMARY: ' + String(d.summary).slice(0, 650));
+    if ((d.methodology_steps || []).length) out.push('METHOD: ' + d.methodology_steps.slice(0, 6).map((x, i) => (i + 1) + '. ' + String(x).slice(0, 110)).join(' '));
+    if ((d.ordered_formulas || []).length) out.push('FORMULAS: ' + d.ordered_formulas.slice(0, 8).map(f => (f.name || '') + ' = ' + (f.latex_formula || '')).join('; ').slice(0, 520));
+    if ((d.vocabulary || []).length) out.push('TERMS: ' + d.vocabulary.slice(0, 12).map(v => v.term).join(', '));
+    if ((d.quiz || []).length) out.push('QUIZ TOPICS: ' + d.quiz.slice(0, 3).map(x => String(x.question).slice(0, 80)).join(' | '));
+  } else {
+    out.push('LANGUAGE: ' + (d.language || 'unknown'));
+    if (d.overview) out.push('OVERVIEW: ' + String(d.overview).slice(0, 650));
+    if (d.complexity) out.push('COMPLEXITY: ' + String(d.complexity).slice(0, 260));
+    if ((d.edge_cases || []).length) out.push('EDGE CASES: ' + d.edge_cases.slice(0, 5).map(x => String(x).slice(0, 100)).join(' | '));
+  }
+  return out.join('\n').slice(0, SUMMARY_MAX);
+}
+function chatPayload(ws, s, q, history) {
+  return {
+    message: q, question: q, history, model: pickedModel(),
+    active_studio: activeStudioId(ws),
+    source_titles: sourceTitles(ws, s),
+    source_text: String((s.data && s.data.source_text) || '').slice(0, SOURCE_TEXT_MAX),
+    analysis_summary: analysisSummary(ws, s),
+    context: s.context || '',                       // older sessions have no source_text: the server falls back to this
+  };
+}
+const TAB_KEYS = {
+  paper: { flowchart: 'flow', lexicon: 'lexicon', quiz: 'quiz', breakdown: 'breakdown', formulas: 'formulas', overview: 'breakdown' },
+  code:  { flowchart: 'flow', breakdown: 'lines', overview: 'overview' },
+};
+const TAB_LABEL = { flowchart: 'Flowchart', lexicon: 'Lexicon', quiz: 'Mastery Check', breakdown: 'Breakdown', formulas: 'Formula Sheet', overview: 'Overview' };
+function actionPillHtml(a) {
+  return `<div class="action-pill ${a.ok ? 'ok' : 'warn'}"><i data-lucide="${a.ok ? 'zap' : 'info'}" class="w-3.5 h-3.5"></i><span>${esc(a.ok ? 'Triggered: ' + a.label : a.label)}</span></div>`;
+}
+/* Decide synchronously whether a command can run here; exec() performs it. Returns { ok, label, exec }. */
+function planChatAction(ws, action, target) {
+  const root = res(ws), has = k => !!$(`[data-sec="${k}"]`, root);
+  const noop = label => ({ ok: false, label, exec() {} });
+  const closeSheet = () => { if (PHONE_UI()) openChat(ws, false); };
+  switch (action) {
+    case 'export_pdf':
+      return { ok: true, label: 'Export Colorful PDF', exec: () => exportGuide(ws) };
+    case 'export_anki':
+      if (ws !== 'paper' || !has('lexicon')) return noop('Not available: Anki export needs the flashcards of a Paper study guide.');
+      return { ok: true, label: 'Export to Anki (.csv)', exec: () => exportAnki() };
+    case 'switch_tab': {
+      const t = TAB_LABEL[target] ? target : 'breakdown', key = (TAB_KEYS[ws] || {})[t];
+      const final = key && has(key) ? key : (t === 'formulas' && has('breakdown') ? 'breakdown' : null);
+      if (!final) return noop('Not available here: the ' + TAB_LABEL[t] + ' section does not exist in this studio.');
+      return { ok: true, label: 'Jump to ' + TAB_LABEL[t], exec: () => { closeSheet(); jumpTo(ws, final); } };
+    }
+    case 'play_audio':
+      if (ws !== 'paper' || !$('.brief', root)) return noop('Not available: the audio brief exists in the Paper studio.');
+      return { ok: true, label: 'Listen to Brief', exec: () => { closeSheet(); jumpTo(ws, 'breakdown'); if (Brief.state !== 'playing') Brief.toggle(); } };
+    default: return noop('Unknown command.');
+  }
+}
+
 async function sendChat(ws, text) {
   const s = activeSession(ws), w = W[ws];
   const q = String(text || '').trim();
@@ -2834,15 +2909,18 @@ async function sendChat(ws, text) {
   setSendMode(ws, true);
 
   const ctrl = new AbortController(); w.abort = ctrl;
-  let acc = '', pending = false;
+  let acc = '', pending = false, act = null, pill = null;
   try {
-    await streamChat({ context: s.context || '', question: q, history, model: pickedModel() }, ctrl.signal, tok => {
+    await streamChat(chatPayload(ws, s, q, history), ctrl.signal, tok => {
       acc += tok;
       if (!pending && live()) { pending = true; requestAnimationFrame(() => { pending = false; if (live()) { textEl.textContent = acc; toBottom(); } }); }
-    });
-    if (!acc.trim()) throw new Error('The AI returned an empty answer. Please rephrase and try again.');
-    s.chat.push({ role: 'assistant', content: acc }); persist();
-    if (live()) { bubble.classList.remove('streaming'); bubble.innerHTML = mdMath(acc); renderMath(bubble); toBottom(); }
+    }, a => { act = planChatAction(ws, a.action, a.target); });
+    if (!acc.trim() && !act) throw new Error('The AI returned an empty answer. Please rephrase and try again.');
+    acc = acc.trim();
+    if (act) pill = { label: act.label, ok: act.ok };
+    s.chat.push(Object.assign({ role: 'assistant', content: acc }, pill ? { action: pill } : {})); persist();
+    if (live()) { bubble.classList.remove('streaming'); bubble.innerHTML = mdMath(acc) + (pill ? actionPillHtml(pill) : ''); renderMath(bubble); icons(); toBottom(); }
+    if (act && act.ok) setTimeout(() => { try { act.exec(); } catch (err) { toast('The command could not run: ' + err.message, 'error'); } }, 60);   // after the bubble is painted
   } catch (e) {
     if (e.name === 'AbortError') {
       if (acc.trim()) { s.chat.push({ role: 'assistant', content: acc }); persist(); if (live()) { bubble.classList.remove('streaming'); bubble.innerHTML = mdMath(acc); renderMath(bubble); } }
