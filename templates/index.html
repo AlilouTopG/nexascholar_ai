@@ -1233,6 +1233,11 @@ html.land #workspaceApp { display:none !important; }
 }
 @media (prefers-reduced-motion:reduce) { #landingShowcase { scroll-behavior:auto; } .l-orbit, .l-nd-in, .l-core, .l-mouse::after { animation:none !important; } }
 
+.rs-sec { border:1px solid var(--line); border-radius:.9rem; padding:.85rem 1rem; margin-bottom:.7rem; background:var(--fill); }
+.rs-code { flex:none; min-width:2.2rem; text-align:center; font:800 .8rem 'JetBrains Mono',monospace; padding:.25rem .55rem; border-radius:.5rem; background:var(--co-soft); color:var(--co-t); border:1px solid var(--line-strong); }
+.rs-code.sm { font-size:.68rem; padding:.1rem .4rem; }
+.rs-subs { margin:.7rem 0 0; padding-inline-start:1rem; border-inline-start:2px solid var(--line-strong); display:grid; gap:.6rem; }
+#rs-tree svg { max-width:100%; }
 </style>
 <script>try{if(!localStorage.getItem("nexascholar.seen"))document.documentElement.classList.add("land")}catch(e){document.documentElement.classList.add("land")}</script>
 </head>
@@ -1316,6 +1321,7 @@ html.land #workspaceApp { display:none !important; }
       <button class="nav-i" data-nav="paper" data-tone="em"><i data-lucide="book-open-text" class="w-4 h-4"></i>Paper &amp; Concepts Studio</button>
       <button class="nav-i" data-nav="code" data-tone="co"><i data-lucide="square-terminal" class="w-4 h-4"></i>Code &amp; Logic Studio</button>
       <button class="nav-i" data-nav="pres" data-tone="vi"><i data-lucide="presentation" class="w-4 h-4"></i>Presentations &amp; Pitch Studio</button>
+      <button class="nav-i" data-nav="research" data-tone="co"><i data-lucide="telescope" class="w-4 h-4"></i>Research Plan Architect</button>
       <div class="nav-h">English Proficiency Wing</div>
       <button class="nav-i" data-nav="lab" data-tab="deconstruct" data-tone="am"><i data-lucide="scan-text" class="w-4 h-4"></i>Sentence Deconstructor</button>
       <button class="nav-i" data-nav="lab" data-tab="upgrade" data-tone="am"><i data-lucide="wand-sparkles" class="w-4 h-4"></i>Academic Writing Upgrade</button>
@@ -1526,6 +1532,35 @@ html.land #workspaceApp { display:none !important; }
             </div>
             <div id="res-lab" class="lab-out" aria-live="polite"></div>
           </div>
+        </div>
+      </section>
+
+      <!-- ========== RESEARCH PLAN ARCHITECT ========== -->
+      <section id="ws-research" class="ws-root hidden" data-ws="research">
+        <div class="pres-grid">
+          <aside class="pres-in no-print">
+            <div class="card p-5">
+              <div class="eyebrow mb-1">Research Plan &amp; Methodology Architect</div>
+              <h2 class="font-bold text-base">Plan your research</h2>
+              <label class="fld-l" for="rs-major">Specialty / Major <span class="text-slate-500" dir="rtl" lang="ar">(التخصص)</span></label>
+              <input id="rs-major" class="fld" style="resize:none" maxlength="300" placeholder="e.g. Automatic Control Engineering, Law, Economics">
+              <label class="fld-l" for="rs-course">Course / Module <span class="text-slate-500" dir="rtl" lang="ar">(مقياس البحث)</span></label>
+              <input id="rs-course" class="fld" style="resize:none" maxlength="300" placeholder="e.g. Signal Processing, Administrative Law">
+              <label class="fld-l" for="rs-title">Research title / topic <span class="text-slate-500" dir="rtl" lang="ar">(عنوان البحث)</span></label>
+              <textarea id="rs-title" class="fld" rows="3" maxlength="300" placeholder="Your rough title or topic idea"></textarea>
+              <span class="fld-l">Research level</span>
+              <div class="seg wrap full" id="rs-level" role="group" aria-label="Research level">
+                <button data-act="rs-level" data-v="course">Course Research / Exposé <span dir="rtl" lang="ar">(بحث مقياس)</span></button>
+                <button data-act="rs-level" data-v="thesis">Graduation Thesis / Mémoire <span dir="rtl" lang="ar">(مذكرة تخرج)</span></button>
+              </div>
+              <span class="fld-l">Output language</span>
+              <div class="seg full" id="rs-lang" role="group" aria-label="Output language">
+                <button data-act="rs-lang" data-v="arabic">Arabic</button><button data-act="rs-lang" data-v="french">French</button><button data-act="rs-lang" data-v="english">English</button>
+              </div>
+              <button id="rs-run" class="btn-primary w-full mt-4" data-act="rs-run"><i data-lucide="sparkles" class="w-4 h-4"></i><span>Build research plan</span></button>
+            </div>
+          </aside>
+          <div id="res-research" class="pres-out" aria-live="polite"></div>
         </div>
       </section>
 
@@ -2247,7 +2282,7 @@ function renderHistory() {
 
 function abortChat(ws) { const w = W[ws]; if (w.abort) { try { w.abort.abort(); } catch (e) { /* ignore */ } } }
 
-const TITLES = { dash: 'Dashboard', paper: 'Paper & Concepts Studio', code: 'Code & Logic Studio', pres: 'Presentations & Pitch Studio', lab: 'English Proficiency Wing' };
+const TITLES = { dash: 'Dashboard', paper: 'Paper & Concepts Studio', code: 'Code & Logic Studio', pres: 'Presentations & Pitch Studio', research: 'Research Plan Architect', lab: 'English Proficiency Wing' };
 function setWorkspace(ws, tab) {
   if (window.__land) landingHide();
   if (ws !== state.ws) stopAllSpeech();
@@ -2257,10 +2292,11 @@ function setWorkspace(ws, tab) {
   $$('#nav .nav-i').forEach(b => b.classList.toggle('active', b.dataset.nav === ws && (ws !== 'lab' || b.dataset.tab === state.lab)));
   document.body.dataset.ws = ws;
   $('#view-title').textContent = ws === 'lab' ? LAB_META[state.lab].title : TITLES[ws];
-  $('#new-label').textContent = ws === 'lab' ? 'Clear result' : ws === 'pres' ? 'New deck' : 'New Analysis';
+  $('#new-label').textContent = ws === 'lab' ? 'Clear result' : ws === 'pres' ? 'New deck' : ws === 'research' ? 'New plan' : 'New Analysis';
   if (ws === 'dash') renderDash();
   if (window.__srs) srsPaint();
   if (ws === 'pres' && window.__v41) renderPres();
+  if (ws === 'research' && window.__rs) renderResearch();
   if (ws === 'lab') renderLab();
   renderHistory();
   requestAnimationFrame(() => { if (DG[ws]) { if (DG[ws].el && !DG[ws].fitted) fitDiagram(ws); updateSpy(ws); } });
@@ -2291,6 +2327,7 @@ function newAnalysis() {
   if (state.ws === 'dash') return setWorkspace('paper');
   if (state.ws === 'lab') return labReset();
   if (state.ws === 'pres') return presReset();
+  if (state.ws === 'research') return rsReset();
   const ws = state.ws;
   abortChat(ws); stopAllSpeech();
   W[ws].activeId = null;
@@ -4558,6 +4595,126 @@ if ('IntersectionObserver' in window) {
 }
 if (!ls.get(LAND_KEY)) landingShow(); else landStep(1);
 window.__land = true;
+
+
+/* =====================================================================
+   v4.5: Research Plan & Methodology Architect (POST /api/research-plan, Copilot active_studio="research")
+   ===================================================================== */
+const RS_KEY = 'nexascholar.research.v1';
+const RS = { plan: null, level: 'course', lang: 'english', busy: false, chat: [], chatBusy: false };
+let rsDiag = 0;
+function rsLoad() {
+  try {
+    const o = JSON.parse(ls.get(RS_KEY) || 'null'); if (!o) return;
+    if (o.plan && Array.isArray(o.plan.outline_tree)) RS.plan = o.plan;
+    if (['course', 'thesis'].includes(o.level)) RS.level = o.level;
+    if (['arabic', 'french', 'english'].includes(o.lang)) RS.lang = o.lang;
+    ['major', 'course', 'title'].forEach(k => { if (o[k]) $('#rs-' + k).value = o[k]; });
+  } catch (e) { /* ignore */ }
+}
+function rsSave() { ls.set(RS_KEY, JSON.stringify({ plan: RS.plan, level: RS.level, lang: RS.lang, major: $('#rs-major').value, course: $('#rs-course').value, title: $('#rs-title').value })); }
+function rsPaintInputs() {
+  $$('#rs-level button').forEach(b => b.classList.toggle('active', b.dataset.v === RS.level));
+  $$('#rs-lang button').forEach(b => b.classList.toggle('active', b.dataset.v === RS.lang));
+  const r = $('#rs-run'); r.disabled = RS.busy;
+  r.innerHTML = RS.busy ? '<div class="spinner"></div><span>Designing your plan...</span>' : '<i data-lucide="sparkles" class="w-4 h-4"></i><span>' + (RS.plan ? 'Rebuild plan' : 'Build research plan') + '</span>';
+}
+const rsPillars = (p, ar) => [
+  ['help-circle', 'Problem statement', ar ? 'الإشكالية' : '', p.problem_statement, 'am'],
+  ['flask-conical', 'Hypotheses', ar ? 'الفرضيات' : '', (p.hypotheses || []).length ? '<ol class="list-decimal pl-5 space-y-1">' + p.hypotheses.map(h => `<li>${esc(h)}</li>`).join('') + '</ol>' : '', 'co', true],
+  ['target', 'Objectives & importance', ar ? 'الأهداف والأهمية' : '', p.objectives_and_importance, 'em'],
+  ['wrench', 'Methodology & tools', ar ? 'المنهج والأدوات' : '', p.methodology_and_tools, 'co'],
+  ['ruler', 'Scope & variables', ar ? 'حدود الدراسة والمتغيرات' : '', p.scope_and_variables, 'am']
+];
+function rsText() {
+  const p = RS.plan, pl = p.pillars;
+  const outline = p.outline_tree.map(s => `${s.code} ${s.heading} - ${s.summary}\n` + (s.subsections || []).map(u => `  ${u.code} ${u.heading}: ${(u.key_points || []).join('; ')}`).join('\n')).join('\n');
+  return `${p.refined_title}\n\nProblem: ${pl.problem_statement}\nHypotheses: ${(pl.hypotheses || []).join(' | ')}\nObjectives: ${pl.objectives_and_importance}\nMethodology: ${pl.methodology_and_tools}\nScope: ${pl.scope_and_variables}\n\nOutline:\n${outline}\n\nKeywords: ${(p.search_keywords || []).join(', ')}\nReferences: ${(p.suggested_references || []).join(' | ')}`;
+}
+function renderResearch() {
+  rsPaintInputs();
+  const out = $('#res-research');
+  if (RS.busy) { out.innerHTML = '<div class="card p-6 space-y-3" aria-busy="true"><div class="flex items-center gap-2 text-sm text-amber font-semibold"><span class="pulse-dot"></span>Your supervisor is drafting the plan...</div><div class="sk h-6 w-2/3"></div><div class="sk h-24 w-full"></div><div class="sk h-4 w-11/12"></div><div class="sk h-32 w-full"></div></div>'; return; }
+  const p = RS.plan;
+  if (!p) {
+    out.innerHTML = `<div class="card p-8 text-center"><div class="w-14 h-14 rounded-2xl bg-amber-soft text-amber mx-auto flex items-center justify-center mb-4"><i data-lucide="telescope" class="w-7 h-7"></i></div><h3 class="text-lg font-extrabold">Research Plan Architect</h3>
+      <ul class="text-sm text-slate-500 mt-3 space-y-1.5 max-w-sm mx-auto text-left">${['A refined academic title and the five pillars of your research', 'A discipline-aware outline: المبحث / المطلب or Chapter / 1.1', 'A visual plan tree, search keywords and starter references'].map(h => `<li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-amber mt-0.5 shrink-0"></i>${h}</li>`).join('')}</ul></div>`;
+    icons(); return;
+  }
+  const ar = p.language === 'arabic', dir = ar ? 'dir="rtl"' : '';
+  const pills = rsPillars(p.pillars || {}, ar).filter(x => x[3]).map(([ic, t, tAr, body, tone, raw]) => `<div class="card p-4"><h4 class="font-bold text-sm flex items-center gap-2 mb-1.5"><i data-lucide="${ic}" class="w-4 h-4 text-${tone === 'em' ? 'emerald' : tone === 'co' ? 'cobalt' : 'amber'}"></i>${t}${tAr ? ` <span class="text-slate-500 font-semibold" dir="rtl" lang="ar">(${tAr})</span>` : ''}</h4><div class="text-sm leading-relaxed text-slate-300">${raw ? body : esc(body)}</div></div>`).join('');
+  const tree = p.outline_tree.map(s => `<div class="rs-sec"><div class="flex items-start gap-3"><span class="rs-code">${esc(s.code)}</span><div class="min-w-0"><h4 class="font-bold">${esc(s.heading)}</h4>${s.summary ? `<p class="text-sm text-slate-400 mt-0.5">${esc(s.summary)}</p>` : ''}</div></div>
+      ${(s.subsections || []).length ? `<div class="rs-subs">${s.subsections.map(u => `<div class="rs-sub"><div class="flex items-baseline gap-2"><span class="rs-code sm">${esc(u.code)}</span><b class="text-sm">${esc(u.heading)}</b></div>${(u.key_points || []).length ? `<ul class="list-disc pl-5 text-[13px] text-slate-400 mt-1 space-y-0.5">${u.key_points.map(k => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}</div>`).join('')}</div>` : ''}</div>`).join('');
+  const tags = (arr) => (arr || []).map(k => `<span class="pill">${esc(k)}</span>`).join('');
+  out.innerHTML = `
+    <div class="card p-5 fade-in"><div class="pres-head"><div class="min-w-0"><div class="eyebrow mb-1">Refined title</div><h2 class="text-xl font-extrabold tracking-tight title-grad" ${dir}>${esc(p.refined_title)}</h2>
+      <div class="flex flex-wrap gap-1.5 mt-3"><span class="pill vi">${p.research_level === 'thesis' ? 'Graduation thesis' : 'Course research'}</span><span class="pill">${esc(p.major)}</span>${p.course ? `<span class="pill">${esc(p.course)}</span>` : ''}</div></div>
+      <button class="btn-ghost" data-act="rs-copy"><i data-lucide="copy" class="w-3.5 h-3.5"></i>Copy plan</button></div></div>
+    <div class="grid md:grid-cols-2 gap-3" ${dir}>${pills}</div>
+    <div class="card p-5" ${dir}><h3 class="font-bold flex items-center gap-2 mb-3"><i data-lucide="list-tree" class="w-4 h-4 text-emerald"></i>${ar ? 'خطة البحث' : 'Outline'}</h3>${tree}</div>
+    <div class="card p-5"><h3 class="font-bold flex items-center gap-2 mb-3"><i data-lucide="git-fork" class="w-4 h-4 text-cobalt"></i>Plan tree</h3><div class="dg-inner" id="rs-tree" style="overflow:auto;text-align:center"></div></div>
+    <div class="grid md:grid-cols-2 gap-3"><div class="card p-4"><h4 class="font-bold text-sm mb-2 flex items-center gap-2"><i data-lucide="search" class="w-4 h-4 text-amber"></i>Search keywords</h4><div class="flex flex-wrap gap-1.5">${tags(p.search_keywords)}</div></div>
+      <div class="card p-4"><h4 class="font-bold text-sm mb-2 flex items-center gap-2"><i data-lucide="library" class="w-4 h-4 text-emerald"></i>Suggested references</h4><ul class="list-disc pl-5 text-[13px] text-slate-300 space-y-1">${(p.suggested_references || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul><p class="text-[11px] text-slate-500 mt-2">AI-suggested: verify every reference exists before citing it.</p></div></div>
+    <div class="card p-5"><h3 class="font-bold flex items-center gap-2 mb-2"><i data-lucide="bot" class="w-4 h-4 text-cobalt"></i>Ask the Copilot about this plan</h3>
+      <div id="rs-chat" class="space-y-2 mb-3">${RS.chat.map(m => m.role === 'user' ? `<div class="bub-u">${esc(m.content)}</div>` : `<div class="bub-a prose-nx">${mdMath(m.content)}</div>`).join('')}</div>
+      <form id="rs-ask" class="flex gap-2"><input id="rs-ask-in" class="fld" style="resize:none" maxlength="1500" placeholder="e.g. Suggest a better hypothesis, or expand chapter II"><button class="btn-primary" type="submit" ${RS.chatBusy ? 'disabled' : ''}><i data-lucide="send" class="w-4 h-4"></i><span class="sr-only">Ask</span></button></form></div>`;
+  icons(); rsDraw(p.mermaid_tree);
+}
+async function rsDraw(code) {
+  const box = $('#rs-tree'); if (!box) return;
+  const id = 'rs-mmd-' + (++rsDiag);
+  try {
+    const { svg } = await mermaid.render(id, cleanMermaid(code));
+    if (box.isConnected) { box.innerHTML = svg; const el = box.querySelector('svg'); if (el) { el.style.maxWidth = '100%'; el.style.height = 'auto'; } }
+  } catch (e) {
+    [id, 'd' + id].forEach(i => { const n = document.getElementById(i); if (n) n.remove(); });
+    if (box.isConnected) box.innerHTML = '<div class="text-sm text-amber font-semibold">The plan tree could not be rendered.</div>';
+  }
+}
+async function rsRun() {
+  if (RS.busy) return;
+  const major = $('#rs-major').value.trim(), course = $('#rs-course').value.trim(), title = $('#rs-title').value.trim();
+  if (!major) return toast('Enter your specialty / major first.', 'error');
+  if (title.length < 3) return toast('Enter your research title or topic.', 'error');
+  RS.busy = true; renderResearch();
+  try {
+    const d = await postJSON('/api/research-plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ major, course, title, research_level: RS.level, language: RS.lang, model: pickedModel() }) });
+    RS.plan = d; RS.chat = []; rsSave(); toast('Research plan ready.', 'success');
+  } catch (e) { toast(e.message, 'error', 9000); }
+  finally { RS.busy = false; if (state.ws === 'research') renderResearch(); }
+}
+async function rsAsk(q) {
+  if (!RS.plan || RS.chatBusy || !q.trim()) return;
+  RS.chatBusy = true;
+  const history = RS.chat.slice(-8).map(m => ({ role: m.role, content: m.content }));
+  RS.chat.push({ role: 'user', content: q });
+  $('#rs-chat').insertAdjacentHTML('beforeend', `<div class="bub-u">${esc(q)}</div><div class="bub-a prose-nx" id="rs-live"><span class="st-text"></span><span class="caret"></span></div>`);
+  $('#rs-ask-in').value = '';
+  const live = $('#rs-live'), tx = $('.st-text', live); let acc = '';
+  const p = RS.plan, summary = `Title: ${p.refined_title}. Problem: ${p.pillars.problem_statement} Hypotheses: ${(p.pillars.hypotheses || []).join(' | ')}`.slice(0, SUMMARY_MAX);
+  try {
+    await streamChat({ message: q, question: q, history, model: pickedModel(), active_studio: 'research', source_titles: [p.refined_title], source_text: rsText().slice(0, SOURCE_TEXT_MAX), analysis_summary: summary, context: '' },
+      null, t => { acc += t; tx.textContent = acc; }, () => {});
+    acc = acc.trim(); if (!acc) throw new Error('The AI returned an empty answer. Please rephrase and try again.');
+    RS.chat.push({ role: 'assistant', content: acc });
+    live.removeAttribute('id'); live.innerHTML = mdMath(acc); renderMath(live);
+  } catch (e) { RS.chat.pop(); live.previousElementSibling && live.previousElementSibling.remove(); live.remove(); toast(e.message, 'error', 8000); }
+  finally { RS.chatBusy = false; }
+}
+function rsReset() { RS.plan = null; RS.chat = []; ['major', 'course', 'title'].forEach(k => { $('#rs-' + k).value = ''; }); ls.set(RS_KEY, ''); renderResearch(); }
+const _v41ActRs = v41Act;
+v41Act = function (name, el) {
+  switch (name) {
+    case 'rs-level': RS.level = el.dataset.v; rsPaintInputs(); return rsSave();
+    case 'rs-lang': RS.lang = el.dataset.v; rsPaintInputs(); return rsSave();
+    case 'rs-run': return rsRun();
+    case 'rs-copy': return RS.plan && copyText(rsText());
+  }
+  return _v41ActRs(name, el);
+};
+$('#ws-research').addEventListener('submit', e => { if (e.target.id === 'rs-ask') { e.preventDefault(); rsAsk($('#rs-ask-in').value); } });
+['major', 'course', 'title'].forEach(k => $('#rs-' + k).addEventListener('change', rsSave));
+rsLoad(); window.__rs = true; if (state.ws === 'research') renderResearch();
 
 presLoad(); window.__v41 = true; if (state.ws === 'pres') renderPres();
 
