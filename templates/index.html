@@ -1147,9 +1147,153 @@ body.print-lesson .levelup { display:none !important; }
 }
 
 </style>
+<style id="v44-css">
+/* ===== v4.4: landing showcase + cobalt/cyan workspace accents ===== */
+#workspaceApp { display:contents; }
+#landingShowcase { display:none; }
+html.land #landingShowcase { display:block; }
+html.land #workspaceApp { display:none !important; }
+#workspaceApp {
+  --bg:#050C1F; --glass:rgba(10,22,54,.62); --glass-strong:rgba(7,16,42,.88);
+  --fill:rgba(120,170,255,.06); --fill-hover:rgba(120,180,255,.12);
+  --line:rgba(120,170,255,.16); --line-strong:rgba(120,190,255,.32);
+  --co:#2563eb; --co-t:#00B4FF; --co-soft:rgba(37,99,235,.20); --co-glow:rgba(0,180,255,.40);
+  --input:rgba(2,8,26,.55); --canvas:rgba(2,8,26,.55);
+}
+#workspaceApp #smoke { background:#050C1F; }
+#workspaceApp .orb.o1 { background:radial-gradient(circle, #2563eb 0%, transparent 65%) !important; }
+#workspaceApp .orb.o2 { background:radial-gradient(circle, #00b4ff 0%, transparent 65%) !important; }
+#workspaceApp .btn-primary { background:linear-gradient(135deg,#2563eb,#00a2e8); border-color:rgba(125,211,252,.45); box-shadow:0 6px 20px -6px rgba(0,180,255,.5), inset 0 1px 0 rgba(255,255,255,.2); }
+#workspaceApp .btn-primary:hover:not(:disabled) { box-shadow:0 8px 28px -4px rgba(0,180,255,.65), inset 0 1px 0 rgba(255,255,255,.25); }
+#workspaceApp .nav-i.active:not([data-tone]) , #workspaceApp .nav-i.active[data-tone="em"] { background:rgba(37,99,235,.2); border-color:rgba(0,180,255,.5); box-shadow:0 0 24px -8px rgba(0,180,255,.5); }
+#workspaceApp .nav-i.active[data-tone="em"] svg, #workspaceApp .nav-i.active:not([data-tone]) svg { color:#00B4FF; }
+#workspaceApp .title-grad { background:linear-gradient(100deg,#F8FAFC 10%,#9AD7FF 55%,#00B4FF 100%); -webkit-background-clip:text; background-clip:text; }
+#workspaceApp .seg button.active { box-shadow:0 0 14px -4px rgba(0,180,255,.6), inset 0 0 0 1px rgba(120,190,255,.4); }
+#workspaceApp .logo-mark { background:linear-gradient(135deg,#2563eb,#00b4ff) !important; }
+
+#landingShowcase { position:fixed; inset:0; z-index:50; overflow-y:auto; overflow-x:hidden; scroll-behavior:smooth; color:#fff; font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 12% 8%, rgba(255,255,255,.16), transparent 60%), radial-gradient(800px 700px at 90% 55%, rgba(0,198,255,.35), transparent 60%),
+  linear-gradient(165deg,#0b2ef5 0%,#0066ff 52%,#00a6f5 82%,#00c6ff 100%); }
+#landingShowcase * { box-sizing:border-box; }
+#landingShowcase .glow { position:absolute; border-radius:50%; filter:blur(70px); pointer-events:none; opacity:.55; }
+#landingShowcase h1, #landingShowcase h2, #landingShowcase h3 { text-shadow:0 2px 18px rgba(0,20,120,.25); }
+.l-wrap { max-width:1180px; margin:0 auto; padding:0 1.25rem; position:relative; }
+.l-glass { background:rgba(255,255,255,.10); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,.22); }
+.l-pill { display:inline-flex; align-items:center; justify-content:center; gap:.45rem; border-radius:999px; font-weight:700; font-size:.95rem; padding:.8rem 1.6rem; cursor:pointer; transition:transform .15s, background .2s, box-shadow .2s; text-decoration:none; }
+.l-pill:hover { transform:translateY(-2px); }
+.l-pill.solid { background:#fff; color:#0b2ef5; box-shadow:0 12px 30px -10px rgba(0,20,120,.55); }
+.l-pill.ghost { background:rgba(255,255,255,.10); color:#fff; border:1px solid rgba(255,255,255,.5); backdrop-filter:blur(12px); }
+.l-pill.ghost:hover { background:rgba(255,255,255,.2); }
+.l-pill.sm { padding:.5rem 1.1rem; font-size:.85rem; }
+.l-hero { min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; position:relative; }
+.l-top { display:flex; align-items:center; justify-content:space-between; padding:1.1rem 0; }
+.l-logo { display:flex; align-items:center; gap:.6rem; font-weight:800; font-size:1.05rem; letter-spacing:-.01em; }
+.l-logo b { width:2.1rem; height:2.1rem; border-radius:.65rem; display:inline-flex; align-items:center; justify-content:center; background:#fff; color:#0b2ef5; font-family:'JetBrains Mono',monospace; }
+.l-center { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem 0 5rem; }
+.l-h1 { font-size:clamp(2.3rem, 6.2vw, 4.8rem); line-height:1.04; font-weight:800; letter-spacing:-.03em; max-width:15ch; margin:0; }
+.l-sub { font-size:clamp(1rem, 1.7vw, 1.2rem); line-height:1.65; max-width:46rem; margin:1.4rem auto 0; color:rgba(255,255,255,.9); }
+.l-cta { display:flex; flex-wrap:wrap; gap:.8rem; justify-content:center; margin-top:2rem; }
+.l-scroll { position:absolute; left:50%; bottom:1.4rem; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:.45rem; font-size:.72rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.85); background:none; border:0; cursor:pointer; }
+.l-mouse { width:1.5rem; height:2.4rem; border:2px solid rgba(255,255,255,.8); border-radius:999px; position:relative; }
+.l-mouse::after { content:''; position:absolute; left:50%; top:.45rem; width:.28rem; height:.5rem; margin-left:-.14rem; border-radius:99px; background:#fff; animation:lwheel 1.6s ease-in-out infinite; }
+@keyframes lwheel { 0% { opacity:0; transform:translateY(0); } 30% { opacity:1; } 100% { opacity:0; transform:translateY(.9rem); } }
+.l-sec { padding:6rem 0; position:relative; }
+.l-eye { font-size:.75rem; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,.8); }
+.l-h2 { font-size:clamp(1.8rem, 4vw, 3rem); font-weight:800; letter-spacing:-.02em; margin:.5rem 0 2.2rem; }
+.l-grid { display:grid; gap:1.1rem; grid-template-columns:repeat(2, minmax(0,1fr)); }
+.l-card { text-align:left; color:#fff; border-radius:1.4rem; padding:1.6rem; min-height:11rem; display:flex; flex-direction:column; gap:.55rem; cursor:pointer; transition:transform .2s, background .2s, box-shadow .2s; }
+.l-card:hover { transform:translateY(-4px); background:rgba(255,255,255,.18); box-shadow:0 22px 50px -22px rgba(0,20,120,.7); }
+.l-card .ic { width:2.8rem; height:2.8rem; border-radius:.9rem; background:rgba(255,255,255,.18); display:flex; align-items:center; justify-content:center; }
+.l-card h3 { font-size:1.2rem; font-weight:800; margin:.4rem 0 0; } .l-card p { margin:0; font-size:.92rem; line-height:1.55; color:rgba(255,255,255,.88); }
+.l-card .go { margin-top:auto; font-size:.8rem; font-weight:700; display:inline-flex; gap:.3rem; align-items:center; opacity:.9; }
+.l-flow { display:grid; gap:3rem; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; }
+.l-sticky { position:sticky; top:12vh; }
+.l-radar { position:relative; width:min(100%, 30rem); aspect-ratio:1; margin:0 auto; }
+.l-ring { position:absolute; border-radius:50%; border:1px dashed rgba(255,255,255,.35); }
+.l-ring.r1 { inset:6%; } .l-ring.r2 { inset:26%; border-style:solid; border-color:rgba(255,255,255,.18); }
+.l-orbit { position:absolute; inset:0; animation:lspin 60s linear infinite; }
+.l-slot { position:absolute; inset:0; transform:rotate(var(--a)); }
+.l-nd { position:absolute; top:6%; left:50%; transform:translate(-50%,-50%) rotate(calc(var(--a) * -1)); }
+.l-nd-in { animation:lspin 60s linear infinite reverse; display:flex; align-items:center; justify-content:center; }
+.l-chip { white-space:nowrap; font-size:.78rem; font-weight:700; padding:.5rem .9rem; border-radius:999px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.3); backdrop-filter:blur(10px); transition:all .35s; }
+.l-chip.on { background:#fff; color:#0b2ef5; box-shadow:0 0 0 6px rgba(255,255,255,.22), 0 0 34px rgba(255,255,255,.7); transform:scale(1.12); }
+@keyframes lspin { to { transform:rotate(360deg); } }
+.l-core { position:absolute; inset:34%; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-weight:800; font-size:.9rem; line-height:1.2; background:radial-gradient(circle at 30% 25%, rgba(255,255,255,.5), rgba(255,255,255,.12)); border:1px solid rgba(255,255,255,.55); box-shadow:0 0 60px rgba(255,255,255,.35), inset 0 0 30px rgba(255,255,255,.25); animation:lpulse 3.2s ease-in-out infinite; }
+.l-core small { font-weight:600; opacity:.85; font-size:.68rem; margin-top:.2rem; }
+@keyframes lpulse { 50% { box-shadow:0 0 90px rgba(255,255,255,.55), inset 0 0 30px rgba(255,255,255,.3); } }
+.l-step { padding:2.6rem 0; border-top:1px solid rgba(255,255,255,.28); min-height:42vh; opacity:.55; transition:opacity .4s; }
+.l-step:first-child { border-top:0; padding-top:.5rem; } .l-step.on { opacity:1; }
+.l-step .n { font:800 3.2rem/1 'JetBrains Mono',monospace; color:rgba(255,255,255,.35); } .l-step.on .n { color:#fff; }
+.l-step .k { font-size:.78rem; font-weight:800; letter-spacing:.16em; text-transform:uppercase; margin-top:.8rem; }
+.l-step p { font-size:clamp(1.15rem, 2.2vw, 1.55rem); line-height:1.45; font-weight:600; margin:.6rem 0 0; max-width:28rem; }
+.l-foot { text-align:center; padding:3rem 1rem 4rem; }
+@media (max-width:860px) {
+  .l-grid { grid-template-columns:1fr; } .l-flow { grid-template-columns:1fr; gap:1.5rem; } .l-sticky { position:sticky; top:4vh; z-index:2; } .l-radar { width:min(78vw, 17rem); }
+  .l-sticky { background:rgba(11,46,245,.55); backdrop-filter:blur(14px); border-radius:1.4rem; padding:.6rem; } .l-step { min-height:34vh; } .l-sec { padding:4rem 0; } .l-core { font-size:.72rem; } .l-chip { font-size:.66rem; padding:.35rem .65rem; }
+}
+@media (prefers-reduced-motion:reduce) { #landingShowcase { scroll-behavior:auto; } .l-orbit, .l-nd-in, .l-core, .l-mouse::after { animation:none !important; } }
+
+</style>
+<script>try{if(!localStorage.getItem("nexascholar.seen"))document.documentElement.classList.add("land")}catch(e){document.documentElement.classList.add("land")}</script>
 </head>
 <body>
 
+<!-- ================= LANDING SHOWCASE (first visit; "Overview" returns here) ================= -->
+<div id="landingShowcase" role="document" aria-label="NexaScholar AI overview">
+  <section class="l-hero">
+    <div class="glow" style="width:34rem;height:34rem;left:-10rem;top:-8rem;background:#00c6ff"></div>
+    <div class="glow" style="width:30rem;height:30rem;right:-8rem;bottom:2rem;background:#7aa2ff"></div>
+    <div class="l-wrap" style="width:100%">
+      <div class="l-top"><div class="l-logo"><b>N</b>NexaScholar AI</div><button class="l-pill ghost sm" data-land="enter">Open Workspace</button></div>
+    </div>
+    <div class="l-wrap l-center">
+      <h1 class="l-h1">Master every lecture. Ship every idea.</h1>
+      <p class="l-sub">Trilingual study guides in English, French and Arabic, scanned-PDF OCR, line-by-line code logic, pitch coaching and CEFR exams, all in one glass workspace built for engineering students.</p>
+      <div class="l-cta"><button class="l-pill solid" data-land="enter">Launch Workspace &#8599;</button><button class="l-pill ghost" data-land="sample">Try a sample lecture</button></div>
+    </div>
+    <button class="l-scroll" data-land="scroll" aria-label="Scroll down"><span>Scroll down</span><span class="l-mouse"></span></button>
+  </section>
+
+  <section class="l-sec" id="land-s2">
+    <div class="l-wrap">
+      <div class="l-eye">EXPLORE NEXASCHOLAR</div>
+      <h2 class="l-h2">Start with a studio</h2>
+      <div class="l-grid">
+        <button class="l-card l-glass" data-land="go" data-go="paper"><span class="ic"><i data-lucide="book-open-text" class="w-5 h-5"></i></span><h3>Paper &amp; Concepts Studio</h3><p>Trilingual breakdowns, LaTeX &amp; Mermaid diagrams</p><span class="go">Open studio &#8594;</span></button>
+        <button class="l-card l-glass" data-land="go" data-go="code"><span class="ic"><i data-lucide="square-terminal" class="w-5 h-5"></i></span><h3>Code &amp; Logic Studio</h3><p>Line-by-line execution flow &amp; debugging</p><span class="go">Open studio &#8594;</span></button>
+        <button class="l-card l-glass" data-land="go" data-go="pres"><span class="ic"><i data-lucide="presentation" class="w-5 h-5"></i></span><h3>Presentations &amp; Pitch Studio</h3><p>Slide decks, teleprompter &amp; delivery coach</p><span class="go">Open studio &#8594;</span></button>
+        <button class="l-card l-glass" data-land="go" data-go="lab" data-tab="exam"><span class="ic"><i data-lucide="award" class="w-5 h-5"></i></span><h3>CEFR Language Exam</h3><p>Adaptive A1&ndash;C2 placement &amp; level certification</p><span class="go">Open exam &#8594;</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="l-sec" id="land-s3">
+    <div class="l-wrap">
+      <div class="l-eye">HOW IT WORKS</div>
+      <h2 class="l-h2">From raw material to real fluency</h2>
+      <div class="l-flow">
+        <div class="l-sticky"><div class="l-radar" id="land-radar" aria-hidden="true">
+          <div class="l-ring r1"></div><div class="l-ring r2"></div>
+          <div class="l-orbit">
+            <div class="l-slot" style="--a:0deg"><div class="l-nd"><div class="l-nd-in"><span class="l-chip" data-node="1">PDF / OCR</span></div></div></div>
+            <div class="l-slot" style="--a:90deg"><div class="l-nd"><div class="l-nd-in"><span class="l-chip" data-node="2">LaTeX &amp; Diagrams</span></div></div></div>
+            <div class="l-slot" style="--a:180deg"><div class="l-nd"><div class="l-nd-in"><span class="l-chip" data-node="3a">Anki &amp; SRS</span></div></div></div>
+            <div class="l-slot" style="--a:270deg"><div class="l-nd"><div class="l-nd-in"><span class="l-chip" data-node="3b">Pitch &amp; CEFR</span></div></div></div>
+          </div>
+          <div class="l-core">NexaScholar<br>Core<small>Synthesis engine</small></div>
+        </div></div>
+        <div id="land-steps">
+          <div class="l-step on" data-step="1"><div class="n">01</div><div class="k">Ingest &amp; OCR</div><p>Drop dense lectures, scanned PDFs, or raw code.</p></div>
+          <div class="l-step" data-step="2"><div class="n">02</div><div class="k">Synthesize &amp; Visualize</div><p>Turn complex theory into trilingual notes, formulas, and clickable flowcharts.</p></div>
+          <div class="l-step" data-step="3"><div class="n">03</div><div class="k">Retain &amp; Deliver</div><p>Lock knowledge in with Anki decks, spaced repetition, CEFR exams, and live pitch coaching.</p></div>
+        </div>
+      </div>
+      <div class="l-foot"><button class="l-pill solid" data-land="enter">Launch Workspace &#8599;</button></div>
+    </div>
+  </section>
+</div>
+
+<div id="workspaceApp">
 <!-- Animated smoke / aurora background (decorative, never intercepts input) -->
 <div id="smoke" aria-hidden="true"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="orb o4"></div></div>
 
@@ -1203,6 +1347,7 @@ body.print-lesson .levelup { display:none !important; }
       <button id="sb-toggle" class="icon-btn" aria-label="Toggle sidebar"><i data-lucide="panel-left" class="w-4 h-4"></i></button>
       <h1 id="view-title" class="text-sm sm:text-base font-extrabold tracking-tight truncate">Dashboard</h1>
       <span class="flex-1"></span>
+      <button id="overview-btn" class="btn-ghost" title="Back to the overview page" aria-label="Overview"><i data-lucide="layout-template" class="w-4 h-4"></i><span>Overview</span></button>
       <button id="install-btn" class="btn-ghost" title="Install NexaScholar as an app" aria-label="Install App" aria-haspopup="dialog"><i data-lucide="download" class="w-4 h-4"></i><span id="install-label">Install App</span></button>
       <button id="cefr-chip" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold border border-line rounded-full px-3 py-1 hover:border-amber transition" title="Target CEFR level (click to change)">
         <i data-lucide="target" class="w-3.5 h-3.5 text-amber"></i>Target <b id="cefr-chip-v" class="font-mono text-amber">B2</b>
@@ -1431,6 +1576,8 @@ body.print-lesson .levelup { display:none !important; }
 <div id="chat-scrim" class="no-print" aria-hidden="true"></div>
 
 <!-- ================= INSTALL HELP MODAL ================= -->
+</div><!-- /#workspaceApp -->
+
 <div id="inst-modal" class="no-print" role="dialog" aria-modal="true" aria-labelledby="inst-title" hidden>
   <div class="inst-card">
     <div class="flex items-start gap-3">
@@ -2102,6 +2249,7 @@ function abortChat(ws) { const w = W[ws]; if (w.abort) { try { w.abort.abort(); 
 
 const TITLES = { dash: 'Dashboard', paper: 'Paper & Concepts Studio', code: 'Code & Logic Studio', pres: 'Presentations & Pitch Studio', lab: 'English Proficiency Wing' };
 function setWorkspace(ws, tab) {
+  if (window.__land) landingHide();
   if (ws !== state.ws) stopAllSpeech();
   state.ws = ws;
   if (ws === 'lab' && tab) { state.lab = tab; ls.set('nexascholar.lab', tab); }
@@ -4360,6 +4508,56 @@ document.addEventListener('click', e => {
   else srsRate(a);
 });
 srsLoad(); srsSync(); window.__srs = true; srsPaint();
+
+
+/* =====================================================================
+   v4.4: landing showcase <-> #workspaceApp
+   ===================================================================== */
+const LAND_KEY = 'nexascholar.seen';
+const landEl = $('#landingShowcase');
+function landingShow() {
+  stopAllSpeech();
+  document.documentElement.classList.add('land');
+  landEl.scrollTo({ top: 0, behavior: 'auto' }); landStep(1); icons();
+}
+function landingHide() {
+  if (!document.documentElement.classList.contains('land')) return;
+  document.documentElement.classList.remove('land'); ls.set(LAND_KEY, '1');
+  requestAnimationFrame(() => { window.dispatchEvent(new Event('resize')); try { if (DG[state.ws] && DG[state.ws].el) fitDiagram(state.ws); } catch (e) { /* ignore */ } });
+}
+function landStep(n) {
+  $$('#land-steps .l-step').forEach(el => el.classList.toggle('on', +el.dataset.step === n));
+  const on = { 1: ['1'], 2: ['2'], 3: ['3a', '3b'] }[n] || [];
+  $$('#land-radar [data-node]').forEach(c => c.classList.toggle('on', on.includes(c.dataset.node)));
+}
+function landEnter(ws, tab) { landingHide(); setWorkspace(ws || state.ws || 'dash', tab); }
+function landSample() {
+  landingHide(); setWorkspace('paper');
+  const w = $('#paste-wrap'); if (w) { w.classList.remove('hidden'); const c = $('#paste-chev'); if (c) c.style.transform = 'rotate(180deg)'; }
+  $('#paste-paper').value = SAMPLE_TEXT; const cc = $('#char-count'); if (cc) cc.textContent = SAMPLE_TEXT.length.toLocaleString();
+  if (!W.paper.busy) runPaper();
+}
+landEl.addEventListener('click', e => {
+  const el = e.target.closest('[data-land]'); if (!el) return;
+  const a = el.dataset.land;
+  if (a === 'enter') landEnter();
+  else if (a === 'go') landEnter(el.dataset.go, el.dataset.tab);
+  else if (a === 'sample') landSample();
+  else if (a === 'scroll') $('#land-s2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+$('#overview-btn').addEventListener('click', landingShow);
+if ('IntersectionObserver' in window) {
+  const seen = new Map();
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => seen.set(en.target, en.intersectionRatio));
+    let best = null, ratio = 0;
+    seen.forEach((r, el) => { if (r > ratio) { ratio = r; best = el; } });
+    if (best && ratio > 0) landStep(+best.dataset.step);
+  }, { root: landEl, rootMargin: '-35% 0px -35% 0px', threshold: [0, .25, .5, .75, 1] });
+  $$('#land-steps .l-step').forEach(el => io.observe(el));
+}
+if (!ls.get(LAND_KEY)) landingShow(); else landStep(1);
+window.__land = true;
 
 presLoad(); window.__v41 = true; if (state.ws === 'pres') renderPres();
 
