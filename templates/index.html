@@ -1058,6 +1058,95 @@ body.print-lesson .levelup { display:none !important; }
 }
 
 </style>
+<style id="v41-css">
+/* ===== v4.1: Presentations, spaced repetition, CEFR exam ===== */
+.nav-i .due-badge, .due-badge { margin-left:auto; min-width:1.35rem; height:1.35rem; padding:0 .4rem; border-radius:99px; background:var(--am-soft); color:var(--am-t); border:1px solid rgba(251,191,36,.5); font:700 .7rem/1.25rem 'JetBrains Mono',monospace; text-align:center; }
+.due-chip { display:inline-flex; align-items:center; gap:.4rem; font-size:.75rem; font-weight:700; border:1px solid rgba(251,191,36,.5); background:var(--am-soft); color:var(--am-t); border-radius:99px; padding:.3rem .75rem; box-shadow:0 0 18px -8px rgba(251,191,36,.6); }
+.due-chip:hover { filter:brightness(1.15); }
+.nav-i[data-tone="vi"].active { background:rgba(139,92,246,.16); border-color:rgba(167,139,250,.5); box-shadow:0 0 24px -8px rgba(139,92,246,.5); }
+.nav-i[data-tone="vi"].active svg { color:#C4B5FD; }
+#srs-banner { margin:.75rem 1rem 0; padding:.6rem .8rem; border:1px solid rgba(251,191,36,.4); background:var(--am-soft); border-radius:.9rem; display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .75rem; font-size:.8rem; }
+@media (min-width:1024px) { #srs-banner { margin:1rem 1.5rem 0; } }
+#srs-banner .sb-t { font-weight:800; color:var(--am-t); display:flex; align-items:center; gap:.4rem; }
+#srs-banner .sb-l { display:flex; flex-wrap:wrap; gap:.35rem; flex:1 1 240px; min-width:0; }
+.srs-pill { border:1px solid var(--line); background:var(--fill); border-radius:99px; padding:.25rem .7rem; font-weight:600; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-h); }
+.srs-pill:hover { border-color:rgba(251,191,36,.6); }
+#srs-bar { position:fixed; left:50%; transform:translateX(-50%); bottom:1rem; z-index:60; width:min(680px, calc(100vw - 1.5rem)); display:none; flex-wrap:wrap; align-items:center; gap:.6rem; padding:.7rem .85rem; border-radius:1rem; border:1px solid rgba(251,191,36,.5); background:var(--glass-strong); backdrop-filter:blur(18px); box-shadow:0 18px 50px -12px rgba(0,0,0,.6); }
+#srs-bar.show { display:flex; }
+#srs-bar .t { flex:1 1 200px; min-width:0; font-size:.8rem; } #srs-bar .t b { display:block; color:var(--am-t); font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; } #srs-bar .t span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-h); font-weight:700; }
+.srs-btn { font-size:.78rem; font-weight:800; padding:.5rem .85rem; border-radius:.7rem; border:1px solid var(--line); color:var(--text-h); background:var(--fill); }
+.srs-btn.hard { border-color:rgba(248,113,113,.5); color:#FCA5A5; } .srs-btn.good { border-color:rgba(52,211,153,.55); color:var(--em-t); } .srs-btn.easy { border-color:rgba(56,189,248,.55); color:var(--co-t); }
+.srs-btn:hover { filter:brightness(1.25); }
+@media (max-width:768px) { #srs-bar { bottom:calc(64px + env(safe-area-inset-bottom, 0px) + .5rem); } .srs-btn { flex:1; min-height:44px; } }
+.due-card { border:1px solid rgba(251,191,36,.4); background:var(--am-soft); border-radius:1rem; padding:1rem 1.1rem; }
+.due-row { display:flex; align-items:center; gap:.6rem; padding:.4rem 0; border-top:1px solid var(--line); } .due-row:first-of-type { border-top:0; }
+.due-row .n { flex:1; min-width:0; font-weight:700; font-size:.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .due-row .m { font-size:.7rem; color:var(--faint); }
+
+.pres-grid { display:grid; gap:1.25rem; align-items:start; max-width:1440px; margin:0 auto; padding:1rem; }
+@media (min-width:1024px) { .pres-grid { grid-template-columns:minmax(0,380px) minmax(0,1fr); padding:1.5rem; } .pres-in { position:sticky; top:1.5rem; } }
+.pres-grid > * { min-width:0; }
+.pres-out { display:grid; gap:1rem; }
+.seg.wrap { flex-wrap:wrap; } .seg.full { display:flex; width:100%; } .seg.full button { flex:1; }
+.fld-l { display:block; font-size:.75rem; font-weight:700; color:var(--text-h); margin:.9rem 0 .35rem; }
+.fld { width:100%; border:1px solid var(--line); border-radius:.75rem; padding:.65rem .8rem; font-size:.85rem; line-height:1.5; background:var(--input, rgba(0,0,0,.25)); color:var(--text-h); resize:vertical; }
+.fld:focus { outline:none; border-color:rgba(167,139,250,.7); box-shadow:0 0 0 3px rgba(139,92,246,.2); }
+.pres-head { display:flex; flex-wrap:wrap; gap:.75rem; align-items:flex-start; justify-content:space-between; }
+.pill { display:inline-flex; align-items:center; gap:.3rem; font-size:.7rem; font-weight:700; padding:.15rem .6rem; border-radius:99px; border:1px solid var(--line); background:var(--fill); color:var(--text-b); }
+.pill.vi { border-color:rgba(167,139,250,.5); color:#C4B5FD; background:rgba(139,92,246,.12); }
+.stage { display:grid; gap:1rem; } @media (min-width:1100px) { .stage { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } } .stage > * { min-width:0; }
+.slide-card { position:relative; aspect-ratio:16/10; min-height:260px; border-radius:1rem; padding:1.4rem 1.5rem; display:flex; flex-direction:column; overflow:hidden; border:1px solid rgba(167,139,250,.4);
+  background:radial-gradient(900px 300px at 0% 0%, rgba(16,185,129,.18), transparent 60%), radial-gradient(700px 300px at 100% 100%, rgba(139,92,246,.22), transparent 60%), rgba(8,12,22,.85); box-shadow:0 24px 60px -24px rgba(139,92,246,.45); }
+.slide-card .no { font:700 .7rem 'JetBrains Mono',monospace; color:#C4B5FD; letter-spacing:.08em; }
+.slide-card h3 { font-size:clamp(1.15rem, 2.2vw, 1.6rem); font-weight:800; line-height:1.2; color:var(--text-h); margin:.35rem 0 .9rem; overflow-wrap:anywhere; }
+.slide-card ul { list-style:none; margin:0; padding:0; display:grid; gap:.5rem; } .slide-card li { display:flex; gap:.6rem; font-size:.95rem; line-height:1.4; color:var(--text-b); } .slide-card li::before { content:''; flex:none; width:.5rem; height:.5rem; margin-top:.5rem; border-radius:50%; background:var(--em-t); box-shadow:0 0 10px var(--em-glow); }
+.slide-card .vis { margin-top:auto; padding-top:.8rem; font-size:.75rem; color:var(--am-t); display:flex; gap:.45rem; align-items:flex-start; } .slide-card .vis i, .slide-card .vis svg { flex:none; margin-top:.1rem; }
+.tele { border-radius:1rem; border:1px solid var(--line); background:var(--glass); padding:1.1rem 1.2rem; display:flex; flex-direction:column; gap:.8rem; min-height:260px; }
+.tele .script { font-size:1.05rem; line-height:1.85; color:var(--text-h); max-height:340px; overflow-y:auto; white-space:pre-wrap; overflow-wrap:anywhere; padding-right:.3rem; }
+.pz { display:inline-block; font:700 .62rem 'JetBrains Mono',monospace; letter-spacing:.06em; padding:.05rem .45rem; margin:0 .15rem; border-radius:99px; background:var(--am-soft); color:var(--am-t); border:1px solid rgba(251,191,36,.45); vertical-align:middle; }
+.cue { border-left:3px solid var(--am-t); background:var(--am-soft); border-radius:.6rem; padding:.6rem .8rem; font-size:.82rem; line-height:1.55; color:var(--text-b); } .cue b { color:var(--am-t); display:block; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; margin-bottom:.2rem; }
+.slide-nav { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+.dots { display:flex; gap:.35rem; flex:1; justify-content:center; flex-wrap:wrap; } .dots button { width:.7rem; height:.7rem; border-radius:50%; background:var(--line-strong, rgba(255,255,255,.25)); border:0; padding:0; } .dots button.on { background:#A78BFA; box-shadow:0 0 12px rgba(167,139,250,.9); transform:scale(1.25); }
+@media (max-width:768px) { .dots button { width:1rem; height:1rem; } }
+.timer { font:800 1.7rem 'JetBrains Mono',monospace; color:var(--text-h); } .timer small { font-size:.8rem; color:var(--faint); font-weight:600; }
+.tbar { height:.5rem; border-radius:99px; background:rgba(255,255,255,.08); overflow:hidden; } .tbar > i { display:block; height:100%; width:0; border-radius:99px; background:var(--em-t); transition:width .25s, background .25s; } .tbar.warn > i { background:var(--am-t); } .tbar.over > i { background:#F87171; }
+.fb-scores { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:.6rem; } @media (min-width:640px) { .fb-scores { grid-template-columns:repeat(4, minmax(0,1fr)); } }
+.fb-s { border:1px solid var(--line); border-radius:.8rem; padding:.55rem .7rem; background:var(--fill); } .fb-s .l { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); } .fb-s .v { font:800 1.35rem 'JetBrains Mono',monospace; color:var(--text-h); } .fb-s .v small { font-size:.7rem; color:var(--faint); }
+.qa-det { border:1px solid var(--line); border-radius:.8rem; background:var(--fill); margin-bottom:.5rem; } .qa-det summary { cursor:pointer; padding:.65rem .85rem; font-weight:700; font-size:.85rem; } .qa-det > div { padding:0 .85rem .8rem; font-size:.85rem; line-height:1.6; color:var(--text-b); }
+.bub-u, .bub-a { border-radius:.8rem; padding:.55rem .8rem; font-size:.85rem; line-height:1.55; } .bub-u { background:var(--co-soft); } .bub-a { background:var(--fill); border:1px solid var(--line); }
+
+/* CEFR exam */
+.xq { font-size:1.02rem; font-weight:700; line-height:1.55; color:var(--text-h); margin:.4rem 0 .9rem; overflow-wrap:anywhere; }
+.xpass { border-left:3px solid var(--co-t); background:var(--co-soft); border-radius:.6rem; padding:.7rem .9rem; font-size:.88rem; line-height:1.7; color:var(--text-b); margin-bottom:.9rem; }
+.xopts { display:grid; gap:.5rem; }
+.xopt { display:flex; gap:.7rem; align-items:flex-start; text-align:left; width:100%; border:1px solid var(--line); background:var(--fill); border-radius:.8rem; padding:.7rem .85rem; font-size:.9rem; color:var(--text-b); transition:all .15s; }
+.xopt:hover:not(:disabled) { border-color:rgba(251,191,36,.6); background:var(--am-soft); }
+.xopt b { flex:none; width:1.5rem; height:1.5rem; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font:800 .72rem 'JetBrains Mono',monospace; background:rgba(255,255,255,.08); color:var(--text-h); }
+.xopt.ok { border-color:#34D399; background:rgba(16,185,129,.16); color:var(--text-h); } .xopt.bad { border-color:#F87171; background:rgba(248,113,113,.14); color:var(--text-h); } .xopt:disabled { cursor:default; }
+.xexp { margin-top:.8rem; border-left:3px solid var(--em-t); background:var(--em-soft); border-radius:.6rem; padding:.6rem .85rem; font-size:.84rem; line-height:1.6; }
+.pbar { height:.45rem; border-radius:99px; background:rgba(255,255,255,.08); overflow:hidden; } .pbar > i { display:block; height:100%; background:linear-gradient(90deg,#34D399,#FBBF24); border-radius:99px; transition:width .3s; }
+.lvbadge { font:800 .68rem 'JetBrains Mono',monospace; padding:.1rem .5rem; border-radius:99px; background:rgba(99,102,241,.2); color:#A5B4FC; border:1px solid rgba(129,140,248,.5); }
+.cert { position:relative; text-align:center; border-radius:1.1rem; padding:1.6rem 1.2rem; border:2px solid rgba(251,191,36,.6); background:radial-gradient(600px 240px at 50% 0%, rgba(251,191,36,.16), transparent 70%), rgba(8,12,22,.7); box-shadow:0 0 50px -18px rgba(251,191,36,.6); }
+.cert .lv { font:900 4.2rem/1 'JetBrains Mono',monospace; background:linear-gradient(120deg,#34D399,#FBBF24,#A78BFA); -webkit-background-clip:text; background-clip:text; color:transparent; margin:.4rem 0; }
+.cert .nm { display:inline-block; min-width:12rem; max-width:100%; text-align:center; border:0; border-bottom:1px dashed var(--line-strong, #64748B); background:transparent; font-size:1.15rem; font-weight:800; color:var(--text-h); padding:.2rem .4rem; }
+.cert .nm:focus { outline:none; border-bottom-color:var(--am-t); }
+.lvrow { display:grid; grid-template-columns:2.4rem minmax(0,1fr) 3.4rem; gap:.6rem; align-items:center; font-size:.78rem; } .lvrow .k { font:800 .75rem 'JetBrains Mono',monospace; color:var(--text-h); } .lvrow .s { text-align:right; font:700 .75rem 'JetBrains Mono',monospace; color:var(--faint); }
+.rv { border:1px solid var(--line); border-left:4px solid var(--line); border-radius:.8rem; padding:.65rem .85rem; margin-bottom:.55rem; background:var(--fill); font-size:.84rem; line-height:1.55; } .rv.ok { border-left-color:#34D399; } .rv.bad { border-left-color:#F87171; } .rv .a { font-size:.78rem; color:var(--faint); margin-top:.3rem; }
+
+@media print {
+  .pd-brand.pd-pres { background:linear-gradient(100deg,#6D28D9 0%,#4338CA 45%,#0369A1 100%) !important; }
+  .pd-hook { border:1px solid #C4B5FD; border-left:4pt solid #7C3AED; background:#F5F3FF !important; border-radius:8pt; padding:6pt 10pt; margin-bottom:6pt; break-inside:avoid; font-size:9.6pt; } .pd-hook b { color:#6D28D9 !important; text-transform:uppercase; font-size:8pt; letter-spacing:.06em; display:block; }
+  .pd-slide { break-inside:avoid; page-break-inside:avoid; border:1px solid #C4B5FD; border-radius:10pt; margin-bottom:10pt; overflow:hidden; background:#fff !important; }
+  .pd-slide > header { display:flex; align-items:center; gap:8pt; background:linear-gradient(100deg,#6D28D9,#4338CA) !important; color:#fff !important; padding:5pt 10pt; } .pd-slide > header * { color:#fff !important; } .pd-slide > header h3 { margin:0; font-size:12pt; font-weight:800; } .pd-slide > header .n { background:#fff !important; color:#4338CA !important; width:17pt; height:17pt; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:9pt; flex:none; } .pd-slide > header .n { color:#4338CA !important; }
+  .pd-sl-body { display:grid; grid-template-columns:38% 1fr; gap:10pt; padding:8pt 10pt; }
+  .pd-sl-body ul { margin:0 0 6pt !important; padding-left:12pt !important; font-size:9.6pt; } .pd-vis { font-size:8.6pt; background:#FFFBEB !important; border:1px solid #FCD34D; border-radius:6pt; padding:3pt 7pt; color:#78350F !important; }
+  .pd-script { font-size:9.6pt; line-height:1.6; white-space:pre-wrap; } .pd-script .pz { background:#FEF3C7 !important; color:#92400E !important; border:1px solid #FCD34D; border-radius:99pt; padding:0 5pt; font-size:7.5pt; font-weight:800; }
+  .pd-cue { margin-top:5pt; background:#ECFDF5 !important; border-left:3pt solid #059669; border-radius:4pt; padding:3pt 8pt; font-size:8.8pt; color:#14532D !important; } .pd-cue b { color:#047857 !important; }
+  .pd-cert { border:4pt double #B45309; border-radius:12pt; padding:26pt 22pt; text-align:center; background:linear-gradient(180deg,#FFFBEB,#fff 45%,#F5F3FF) !important; break-inside:avoid; }
+  .pd-cert h1 { font-size:20pt; margin:0 0 4pt; color:#78350F !important; } .pd-cert .lv { font-size:54pt; font-weight:900; color:#4338CA !important; line-height:1.1; margin:10pt 0 4pt; font-family:'JetBrains Mono',monospace; } .pd-cert .nm { font-size:16pt; font-weight:800; border-bottom:1px solid #94A3B8; display:inline-block; padding:0 16pt 2pt; min-width:180pt; }
+  .pd-bar { display:grid; grid-template-columns:24pt 1fr 40pt; gap:6pt; align-items:center; font-size:9pt; margin-bottom:3pt; } .pd-bar > i { display:block; height:7pt; background:#E2E8F0 !important; border-radius:99pt; position:relative; } .pd-bar > i > u { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(90deg,#059669,#D97706) !important; border-radius:99pt; }
+}
+
+</style>
 </head>
 <body>
 
@@ -1082,10 +1171,12 @@ body.print-lesson .levelup { display:none !important; }
       <div class="nav-h">Academic Studios</div>
       <button class="nav-i" data-nav="paper" data-tone="em"><i data-lucide="book-open-text" class="w-4 h-4"></i>Paper &amp; Concepts Studio</button>
       <button class="nav-i" data-nav="code" data-tone="co"><i data-lucide="square-terminal" class="w-4 h-4"></i>Code &amp; Logic Studio</button>
+      <button class="nav-i" data-nav="pres" data-tone="vi"><i data-lucide="presentation" class="w-4 h-4"></i>Presentations &amp; Pitch Studio</button>
       <div class="nav-h">English Proficiency Wing</div>
       <button class="nav-i" data-nav="lab" data-tab="deconstruct" data-tone="am"><i data-lucide="scan-text" class="w-4 h-4"></i>Sentence Deconstructor</button>
       <button class="nav-i" data-nav="lab" data-tab="upgrade" data-tone="am"><i data-lucide="wand-sparkles" class="w-4 h-4"></i>Academic Writing Upgrade</button>
       <button class="nav-i" data-nav="lab" data-tab="level_lesson" data-tone="am"><i data-lucide="graduation-cap" class="w-4 h-4"></i>CEFR Level Lessons</button>
+      <button class="nav-i" data-nav="lab" data-tab="exam" data-tone="am"><i data-lucide="award" class="w-4 h-4"></i>CEFR Language Exam</button>
     </nav>
     <div class="px-4 pt-3 pb-1.5 flex items-center justify-between border-t border-line">
       <span class="nav-h" style="padding:0">History</span>
@@ -1132,6 +1223,7 @@ body.print-lesson .levelup { display:none !important; }
             <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight title-grad">Study smarter in technical English.</h2>
             <p class="text-sm text-slate-400 mt-2 max-w-xl leading-relaxed">Turn lectures, papers, code and whiteboard photos into guides, diagrams and flashcards, then sharpen your academic English in the lab.</p>
           </div>
+          <div id="dash-due"></div>
           <div id="dash-stats" class="stat-grid"></div>
           <div>
             <h3 class="dash-h">Quick actions</h3>
@@ -1266,6 +1358,7 @@ body.print-lesson .levelup { display:none !important; }
             <button data-act="lab-tab" data-tab="deconstruct" role="tab"><i data-lucide="scan-text" class="w-4 h-4"></i>Sentence Deconstructor</button>
             <button data-act="lab-tab" data-tab="upgrade" role="tab"><i data-lucide="wand-sparkles" class="w-4 h-4"></i>Writing Upgrade</button>
             <button data-act="lab-tab" data-tab="level_lesson" role="tab"><i data-lucide="graduation-cap" class="w-4 h-4"></i>Level Lessons</button>
+            <button data-act="lab-tab" data-tab="exam" role="tab"><i data-lucide="award" class="w-4 h-4"></i>Exam</button>
           </div>
           <div class="lab-grid">
             <div class="card p-5 lab-in">
@@ -1275,8 +1368,51 @@ body.print-lesson .levelup { display:none !important; }
               <button id="lab-run" class="btn-primary w-full mt-4" data-act="lab-run"><i data-lucide="sparkles" class="w-4 h-4"></i><span>Run</span></button>
               <p class="text-[11px] text-slate-400 mt-2">Ctrl/&#8984; + Enter to run</p>
             </div>
+            <div id="exam-setup" class="card p-5 lab-in hidden">
+              <h3 class="font-bold text-base">CEFR Language Exam</h3>
+              <span class="fld-l">Level</span>
+              <div class="seg wrap full" id="exam-level" role="group" aria-label="Exam level">
+                <button data-act="exam-level" data-v="A1">A1</button><button data-act="exam-level" data-v="A2">A2</button><button data-act="exam-level" data-v="B1">B1</button><button data-act="exam-level" data-v="B2">B2</button><button data-act="exam-level" data-v="C1">C1</button><button data-act="exam-level" data-v="C2">C2</button><button data-act="exam-level" data-v="ALL">All Levels</button>
+              </div>
+              <p id="exam-hint" class="text-xs text-slate-400 mt-2"></p>
+              <span class="fld-l">Timer</span>
+              <div class="seg full" id="exam-timer" role="group" aria-label="Timer"><button data-act="exam-timer" data-v="0">Off</button><button data-act="exam-timer" data-v="10">10 min</button><button data-act="exam-timer" data-v="20">20 min</button></div>
+              <button id="exam-start" class="btn-primary w-full mt-4" data-act="exam-start"></button>
+            </div>
             <div id="res-lab" class="lab-out" aria-live="polite"></div>
           </div>
+        </div>
+      </section>
+
+      <!-- ========== PRESENTATIONS & PITCH STUDIO ========== -->
+      <section id="ws-pres" class="ws-root hidden" data-ws="pres">
+        <div class="pres-grid">
+          <aside class="pres-in no-print">
+            <div class="card p-5">
+              <div class="eyebrow mb-1">Presentations &amp; Pitch Studio</div>
+              <h2 class="font-bold text-base">Build your talk</h2>
+              <label class="fld-l" for="pres-topic">Topic or goal</label>
+              <textarea id="pres-topic" class="fld" rows="4" maxlength="1500" placeholder="e.g. Pitch our PLC-based digital twin for smart irrigation to the hackathon jury."></textarea>
+              <span class="fld-l">Target duration</span>
+              <div class="seg wrap full" id="pres-dur" role="group" aria-label="Duration">
+                <button data-act="pres-dur" data-v="pitch">3 min Pitch</button><button data-act="pres-dur" data-v="talk">10 min Academic Talk</button><button data-act="pres-dur" data-v="defense">15 min Defense</button>
+              </div>
+              <span class="fld-l">Language</span>
+              <div class="seg full" id="pres-lang" role="group" aria-label="Language">
+                <button data-act="pres-lang" data-v="english">English</button><button data-act="pres-lang" data-v="french">French</button><button data-act="pres-lang" data-v="arabic">Arabic</button>
+              </div>
+              <label class="fld-l" for="pres-notes">Notes (optional)</label>
+              <textarea id="pres-notes" class="fld" rows="4" placeholder="Paste key facts, results or an abstract..."></textarea>
+              <div class="flex items-center justify-between mt-3">
+                <span class="text-xs font-bold text-ink">Files (optional)</span>
+                <button class="btn-ghost" data-act="pres-addfile"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i>Add files</button>
+              </div>
+              <input id="pres-file" type="file" class="hidden" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md">
+              <div id="pres-chips" class="space-y-1.5 mt-2"></div>
+              <button id="pres-run" class="btn-primary w-full mt-4" data-act="pres-run"><i data-lucide="sparkles" class="w-4 h-4"></i><span>Generate deck</span></button>
+            </div>
+          </aside>
+          <div id="res-pres" class="pres-out" aria-live="polite"></div>
         </div>
       </section>
 
@@ -1318,6 +1454,11 @@ body.print-lesson .levelup { display:none !important; }
 
 <div id="printdoc" class="pd" aria-hidden="true"></div>
 
+<div id="srs-bar" class="no-print" role="region" aria-label="Spaced repetition review">
+  <div class="t"><b>Spaced review</b><span id="srs-title"></span></div>
+  <button class="srs-btn hard" id="srs-hard" data-srs="hard">Hard 1d</button><button class="srs-btn good" id="srs-good" data-srs="good">Good</button><button class="srs-btn easy" id="srs-easy" data-srs="easy">Easy</button>
+  <button class="icon-btn" data-srs="skip" aria-label="Dismiss review bar"><i data-lucide="x" class="w-4 h-4"></i></button>
+</div>
 <div id="toasts" aria-live="polite"></div>
 
 <script>
@@ -1959,7 +2100,7 @@ function renderHistory() {
 
 function abortChat(ws) { const w = W[ws]; if (w.abort) { try { w.abort.abort(); } catch (e) { /* ignore */ } } }
 
-const TITLES = { dash: 'Dashboard', paper: 'Paper & Concepts Studio', code: 'Code & Logic Studio', lab: 'English Proficiency Wing' };
+const TITLES = { dash: 'Dashboard', paper: 'Paper & Concepts Studio', code: 'Code & Logic Studio', pres: 'Presentations & Pitch Studio', lab: 'English Proficiency Wing' };
 function setWorkspace(ws, tab) {
   if (ws !== state.ws) stopAllSpeech();
   state.ws = ws;
@@ -1968,8 +2109,10 @@ function setWorkspace(ws, tab) {
   $$('#nav .nav-i').forEach(b => b.classList.toggle('active', b.dataset.nav === ws && (ws !== 'lab' || b.dataset.tab === state.lab)));
   document.body.dataset.ws = ws;
   $('#view-title').textContent = ws === 'lab' ? LAB_META[state.lab].title : TITLES[ws];
-  $('#new-label').textContent = ws === 'lab' ? 'Clear result' : 'New Analysis';
+  $('#new-label').textContent = ws === 'lab' ? 'Clear result' : ws === 'pres' ? 'New deck' : 'New Analysis';
   if (ws === 'dash') renderDash();
+  if (window.__srs) srsPaint();
+  if (ws === 'pres' && window.__v41) renderPres();
   if (ws === 'lab') renderLab();
   renderHistory();
   requestAnimationFrame(() => { if (DG[ws]) { if (DG[ws].el && !DG[ws].fitted) fitDiagram(ws); updateSpy(ws); } });
@@ -1999,6 +2142,7 @@ function deleteSession(id) {
 function newAnalysis() {
   if (state.ws === 'dash') return setWorkspace('paper');
   if (state.ws === 'lab') return labReset();
+  if (state.ws === 'pres') return presReset();
   const ws = state.ws;
   abortChat(ws); stopAllSpeech();
   W[ws].activeId = null;
@@ -2963,6 +3107,7 @@ async function withBusy(ws, label, messages, job) {
 }
 function addSession(ws, s) {
   sessions.unshift(s);
+  if (window.__srs) { srsEnroll(s); srsSave(); }
   persist();
   W[ws].activeId = s.id;
   renderWorkspace(ws);
@@ -3250,14 +3395,16 @@ function renderDash() {
   $('#dash-stats').innerHTML =
     card('t-em', 'files', 'Analyzed Materials', sessions.length, `${papers.length} paper${papers.length === 1 ? '' : 's'}, ${codes.length} code`) +
     card('t-am', 'layers', 'Mastered Terms', mastered, terms ? `of ${terms} saved terms` : 'Flip a card, then mark it mastered') +
-    card('t-co', 'circle-check', 'Quizzes Completed', paperQuiz + stats.drills, `${paperQuiz} paper quiz${paperQuiz === 1 ? '' : 'zes'}, ${stats.drills} lab drill${stats.drills === 1 ? '' : 's'}`) +
+    card('t-co', 'circle-check', 'Quizzes Completed', paperQuiz + stats.drills + (stats.exams || 0), `${paperQuiz} paper quiz${paperQuiz === 1 ? '' : 'zes'}, ${stats.drills} lab drill${stats.drills === 1 ? '' : 's'}`) +
     card('t-am', 'target', 'Target CEFR Level', cefr, 'Click to change', 'button');
   const qa = (tone, ic, t, d, go, tab) => `<button class="qa ${tone}" data-act="go" data-go="${go}" ${tab ? `data-tab="${tab}"` : ''}><span class="ic"><i data-lucide="${ic}" class="w-5 h-5"></i></span><span class="t">${t}</span><span class="d">${d}</span><span class="go">Open<i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></span></button>`;
   $('#dash-actions').innerHTML =
     qa('em', 'book-open-text', 'Paper &amp; Concepts', 'Lectures, papers and board photos into one study guide.', 'paper') +
     qa('co', 'square-terminal', 'Code &amp; Logic', 'Line-by-line explanations, complexity and a debugging chat.', 'code') +
     qa('am', 'scan-text', 'Sentence Deconstructor', 'Break a hard sentence into meaning, grammar and connectors.', 'lab', 'deconstruct') +
-    qa('am', 'graduation-cap', 'CEFR Level Lessons', 'A short lesson and a 3-question drill at your level.', 'lab', 'level_lesson');
+    qa('am', 'graduation-cap', 'CEFR Level Lessons', 'A short lesson and a 3-question drill at your level.', 'lab', 'level_lesson') +
+    qa('co', 'presentation', 'Presentations &amp; Pitch', 'Slides, speaker scripts and a delivery coach for your talk.', 'pres');
+  if (window.__srs) srsPaint();
   $('#dash-tips').innerHTML = TIPS.map(t => `<li><b>${t[0]}</b> ${t[1]}</li>`).join('');
   const rec = sessions.slice(0, 5);
   $('#dash-recent').innerHTML = rec.length
@@ -3268,6 +3415,7 @@ function renderDash() {
 
 /* ---------------- English Proficiency Wing ---------------- */
 const LAB_META = {
+  exam: { title: 'CEFR Language Exam', sub: 'Test your English with an AI-written exam. Choose one level or take the full A1 to C2 placement, get instant grading and an estimated level.', label: '', ph: '', run: 'Start exam', icon: 'award', min: 0, sample: '' },
   deconstruct: { title: 'Sentence Deconstructor', sub: 'Paste one long academic sentence. See its core meaning, grammar and the connectors that hold it together.', label: 'Complex sentence', ph: 'e.g. Whereas the gyroscope drifts over time, the filter is corrected by the accelerometer, thereby reducing the error.', run: 'Deconstruct', icon: 'scan-text', min: 8,
     sample: 'Whereas the gyroscope provides a high-rate estimate of orientation that drifts over time, the accelerometer, being corrupted by vibration, is fused with it, thereby yielding an estimate that is both stable and responsive.' },
   upgrade: { title: 'Academic Writing Upgrade', sub: 'Paste your draft. Get polished academic English at your level, with a reason for every change.', label: 'Your draft', ph: 'Paste a paragraph from a report, lab write-up or abstract...', run: 'Upgrade my writing', icon: 'wand-sparkles', min: 15,
@@ -3275,7 +3423,7 @@ const LAB_META = {
   level_lesson: { title: 'CEFR Level Lessons', sub: 'A university-grade grammar and ESP worksheet: rules, common mistakes, key expressions and three kinds of exercises. Export it as a colour PDF.', label: 'Grammar topic or text (optional)', ph: 'e.g. Third conditional, passive voice in methods, reduced relative clauses. Leave empty for a suggestion.', run: 'Generate lesson', icon: 'graduation-cap', min: 0,
     sample: 'Describing cause and effect in a control system' }
 };
-const L = { deconstruct: { input: '', result: null }, upgrade: { input: '', result: null }, level_lesson: { input: '', result: null, answers: {} }, busy: null };
+const L = { deconstruct: { input: '', result: null }, upgrade: { input: '', result: null }, level_lesson: { input: '', result: null, answers: {} }, exam: { input: '', result: null }, busy: null };
 
 function labSave() { const i = $('#lab-input'); if (i) L[state.lab].input = i.value; }
 function labReset() { const t = state.lab; L[t].result = null; L[t].input = ''; if (t === 'level_lesson') L[t].answers = {}; renderLab(); }
@@ -3288,6 +3436,8 @@ function renderLab() {
   $('#lab-count').textContent = inp.value.length.toLocaleString();
   $$('#lab-tabs button').forEach(b => { const on = b.dataset.tab === t; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
   $$('#cefr-seg button').forEach(b => b.classList.toggle('active', b.dataset.level === cefr));
+  $('.lab-in:not(#exam-setup)').classList.toggle('hidden', t === 'exam'); $('#exam-setup').classList.toggle('hidden', t !== 'exam');
+  if (t === 'exam') return renderExam();
   const run = $('#lab-run'); run.disabled = !!L.busy;
   run.innerHTML = L.busy ? '<div class="spinner"></div><span>Working...</span>' : `<i data-lucide="${m.icon}" class="w-4 h-4"></i><span>${m.run}</span>`;
   const out = $('#res-lab');
@@ -3569,6 +3719,7 @@ function labAct(name, el, e) {
     case 'lesson-pdf': return exportLesson();
     case 'lesson-eval': return levelCheck(true);
     case 'promote': return promote();
+    default: return v41Act(name, el, e);
   }
 }
 
@@ -3788,6 +3939,429 @@ async function exportGuide(ws) {
   }
 }
 
+
+
+/* =====================================================================
+   v4.1: Presentations & Pitch Studio (Groq via /api/presentation, /api/presentation-coach, Copilot active_studio=presentation)
+   ===================================================================== */
+const PRES_KEY = 'nexascholar.pres.v1';
+const P = { deck: null, idx: 0, busy: false, dur: 'talk', lang: 'english', files: [], times: {}, fb: {}, practice: {}, tab: 'slide', chat: [], chatBusy: false, abort: null, coachBusy: false };
+const PT = { running: false, start: 0, acc: 0, id: null };
+const PRES_LANG_CODE = { english: 'en-US', french: 'fr-FR', arabic: 'ar-SA' };
+function presLoad() {
+  try {
+    const o = JSON.parse(ls.get(PRES_KEY) || 'null');
+    if (o && o.deck && Array.isArray(o.deck.slides) && o.deck.slides.length) { P.deck = o.deck; P.fb = o.fb || {}; P.practice = o.practice || {}; P.times = o.times || {}; }
+    if (o && ['pitch', 'talk', 'defense'].includes(o.dur)) P.dur = o.dur;
+    if (o && PRES_LANG_CODE[o.lang]) P.lang = o.lang;
+    if (o && o.topic) $('#pres-topic').value = o.topic;
+  } catch (e) { /* ignore */ }
+}
+function presSave() { ls.set(PRES_KEY, JSON.stringify({ deck: P.deck, fb: P.fb, practice: P.practice, times: P.times, dur: P.dur, lang: P.lang, topic: $('#pres-topic').value })); }
+
+const wordsOf = (t) => String(t || '').replace(/\[PAUSE\]/gi, ' ').split(/\s+/).filter(Boolean).length;
+function slideBudget(i) {
+  const d = P.deck; if (!d) return 60;
+  const tot = d.slides.reduce((a, s) => a + wordsOf(s.speaker_script), 0) || 1;
+  return Math.max(10, Math.round((d.target_seconds || 600) * wordsOf(d.slides[i].speaker_script) / tot));
+}
+const mmss = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+const scriptHtml = (t) => esc(t).replace(/\[PAUSE\]/gi, '<span class="pz">PAUSE</span>');
+
+function ptElapsed() { return Math.floor((PT.acc + (PT.running ? Date.now() - PT.start : 0)) / 1000); }
+function ptStop() { if (PT.running) { PT.acc += Date.now() - PT.start; PT.running = false; } clearInterval(PT.id); PT.id = null; }
+function ptStart() { if (PT.running) return; PT.running = true; PT.start = Date.now(); PT.id = setInterval(ptPaint, 250); ptPaint(); }
+function ptPaint() {
+  const el = $('#pt-time'); if (!el || !P.deck) return;
+  const e = ptElapsed(), b = slideBudget(P.idx);
+  el.innerHTML = mmss(e) + ' <small>/ ' + mmss(b) + '</small>';
+  const bar = $('#pt-bar'); bar.style.width = Math.min(100, Math.round(e / b * 100)) + '%';
+  bar.parentElement.classList.toggle('warn', e > b * 0.9 && e <= b * 1.1); bar.parentElement.classList.toggle('over', e > b * 1.1);
+  const st = $('#pt-state'); if (st) st.textContent = e > b * 1.1 ? 'Too slow: speed up' : e > b * 0.9 ? 'On the limit' : e < b * 0.5 && !PT.running && e > 0 ? 'Quite fast' : 'On pace';
+  const tg = $('#pt-toggle'); if (tg) tg.innerHTML = PT.running ? '<i data-lucide="pause" class="w-3.5 h-3.5"></i>Pause' : '<i data-lucide="play" class="w-3.5 h-3.5"></i>' + (e ? 'Resume' : 'Start');
+  icons();
+}
+function presGo(i) {
+  if (!P.deck) return;
+  const n = P.deck.slides.length, j = clamp(i, 0, n - 1);
+  P.times[P.idx] = ptElapsed(); ptStop(); stopAllSpeech();
+  P.idx = j; PT.acc = (P.times[j] || 0) * 1000;
+  renderPres();
+}
+
+function renderPresChips() {
+  $('#pres-chips').innerHTML = P.files.map((f, i) => {
+    const ext = (f.name.split('.').pop() || '').toLowerCase(), kind = ext === 'pdf' ? 'pdf' : /^(png|jpe?g|webp)$/.test(ext) ? 'image' : 'text';
+    return `<div class="chip-file"><span class="chip-ico ${kind}"><i data-lucide="${kind === 'pdf' ? 'file-text' : kind === 'image' ? 'image' : 'file'}" class="w-4 h-4"></i></span><span class="min-w-0 flex-1"><span class="chip-name block">${esc(f.name)}</span><span class="text-[11px] text-slate-500">${fmtSize(f.size)}</span></span><button class="chip-x" data-act="pres-rmfile" data-i="${i}" aria-label="Remove ${esc(f.name)}"><i data-lucide="x" class="w-3.5 h-3.5"></i></button></div>`;
+  }).join('');
+  icons();
+}
+function presPaintInputs() {
+  $$('#pres-dur button').forEach(b => b.classList.toggle('active', b.dataset.v === P.dur));
+  $$('#pres-lang button').forEach(b => b.classList.toggle('active', b.dataset.v === P.lang));
+  const r = $('#pres-run'); r.disabled = P.busy;
+  r.innerHTML = P.busy ? '<div class="spinner"></div><span>Building your deck...</span>' : '<i data-lucide="sparkles" class="w-4 h-4"></i><span>' + (P.deck ? 'Regenerate deck' : 'Generate deck') + '</span>';
+}
+
+function renderPres() {
+  presPaintInputs();
+  const out = $('#res-pres');
+  if (P.busy) {
+    out.innerHTML = '<div class="card p-6 space-y-3" aria-busy="true"><div class="flex items-center gap-2 text-sm text-amber font-semibold"><span class="pulse-dot"></span>Writing slides, scripts and coaching cues...</div><div class="sk h-6 w-2/3"></div><div class="sk h-40 w-full"></div><div class="sk h-4 w-11/12"></div><div class="sk h-4 w-4/5"></div></div>';
+    return;
+  }
+  const d = P.deck;
+  if (!d) {
+    out.innerHTML = `<div class="card p-8 text-center"><div class="w-14 h-14 rounded-2xl bg-amber-soft text-amber mx-auto flex items-center justify-center mb-4"><i data-lucide="presentation" class="w-7 h-7"></i></div><h3 class="text-lg font-extrabold">Presentations &amp; Pitch Studio</h3>
+      <ul class="text-sm text-slate-500 mt-3 space-y-1.5 max-w-sm mx-auto text-left">${['6 to 8 slides with word-for-word speaker scripts', 'Delivery cues: [PAUSE] marks, stress and body language', 'A pacing timer, model audio and AI rehearsal coach', 'Q&A prep and a colourful PDF export'].map(h => `<li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-amber mt-0.5 shrink-0"></i>${h}</li>`).join('')}</ul></div>`;
+    icons(); return;
+  }
+  const s = d.slides[P.idx], n = d.slides.length, fb = P.fb[P.idx];
+  const dots = d.slides.map((_, i) => `<button data-act="pres-go" data-i="${i}" class="${i === P.idx ? 'on' : ''}" aria-label="Slide ${i + 1}"></button>`).join('');
+  const head = `<div class="card p-5 fade-in"><div class="pres-head"><div class="min-w-0"><h2 class="text-xl font-extrabold tracking-tight title-grad">${esc(d.title)}</h2>${d.subtitle ? `<p class="text-sm text-slate-400 mt-1">${esc(d.subtitle)}</p>` : ''}
+      <div class="flex flex-wrap gap-1.5 mt-3"><span class="pill vi"><i data-lucide="clock" class="w-3 h-3"></i>${esc(d.total_duration)}</span><span class="pill">${n} slides</span><span class="pill">${esc(P.lang[0].toUpperCase() + P.lang.slice(1))}</span></div></div>
+      <button class="btn-primary" data-act="pres-pdf"><i data-lucide="file-down" class="w-4 h-4"></i>Export Colorful PDF</button></div></div>`;
+  const tabs = `<div class="lab-tabs" role="tablist"><button data-act="pres-tab" data-tab="slide" role="tab" class="${P.tab === 'slide' ? 'active' : ''}"><i data-lucide="presentation" class="w-4 h-4"></i>Slides &amp; Teleprompter</button><button data-act="pres-tab" data-tab="qa" role="tab" class="${P.tab === 'qa' ? 'active' : ''}"><i data-lucide="messages-square" class="w-4 h-4"></i>Q&amp;A Prep</button></div>`;
+  let body;
+  if (P.tab === 'qa') {
+    body = `<div class="card p-5">${(d.qa_prep || []).map((q, i) => `<details class="qa-det" ${i === 0 ? 'open' : ''}><summary>${i + 1}. ${esc(q.question)}</summary><div>${mdMath(q.model_answer)}</div></details>`).join('') || '<p class="text-sm text-slate-500">No Q&amp;A was generated.</p>'}</div>`;
+  } else {
+    body = `
+    <div class="stage">
+      <div class="slide-card" role="group" aria-label="Slide ${s.slide_number}"><span class="no">SLIDE ${s.slide_number} / ${n}</span><h3>${esc(s.title)}</h3>
+        <ul>${(s.bullet_points || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+        ${s.visual_suggestion ? `<div class="vis"><i data-lucide="image" class="w-3.5 h-3.5"></i><span><b>Visual:</b> ${esc(s.visual_suggestion)}</span></div>` : ''}</div>
+      <div class="tele"><div class="flex items-center justify-between gap-2"><span class="eyebrow">Speaker script</span><button class="listen" data-act="pres-listen" aria-label="Listen to model delivery"><i data-lucide="volume-2" class="w-3.5 h-3.5"></i>Listen to Model Delivery</button></div>
+        <div class="script" ${P.lang === 'arabic' ? 'dir="rtl"' : ''}>${scriptHtml(s.speaker_script)}</div>
+        ${s.delivery_coaching ? `<div class="cue"><b>Delivery coaching</b>${scriptHtml(s.delivery_coaching)}</div>` : ''}</div>
+    </div>
+    <div class="slide-nav"><button class="btn-ghost" data-act="pres-prev" ${P.idx === 0 ? 'disabled' : ''}><i data-lucide="chevron-left" class="w-4 h-4"></i>Previous</button><div class="dots">${dots}</div><button class="btn-ghost" data-act="pres-next" ${P.idx === n - 1 ? 'disabled' : ''}>Next<i data-lucide="chevron-right" class="w-4 h-4"></i></button></div>
+    <div class="card p-5"><h3 class="font-bold flex items-center gap-2 mb-3"><i data-lucide="mic" class="w-4 h-4 text-amber"></i>Delivery Rehearsal Coach</h3>
+      <div class="flex flex-wrap items-center gap-3"><div id="pt-time" class="timer">0:00 <small>/ ${mmss(slideBudget(P.idx))}</small></div>
+        <button id="pt-toggle" class="btn-ghost" data-act="pt-toggle"></button><button class="btn-ghost" data-act="pt-reset"><i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>Reset</button><span id="pt-state" class="text-xs font-semibold text-slate-400"></span></div>
+      <div class="tbar mt-3"><i id="pt-bar"></i></div>
+      <label class="fld-l" for="pres-practice">Practice &amp; Get Coaching: type or paste what you would say for this slide</label>
+      <textarea id="pres-practice" class="fld" rows="5" maxlength="3000" ${P.lang === 'arabic' ? 'dir="rtl"' : ''} placeholder="Say it in your own words, then ask for feedback...">${esc(P.practice[P.idx] || '')}</textarea>
+      <button id="pres-coach" class="btn-primary mt-3" data-act="pres-coach" ${P.coachBusy ? 'disabled' : ''}>${P.coachBusy ? '<div class="spinner"></div><span>Coaching...</span>' : '<i data-lucide="sparkles" class="w-4 h-4"></i><span>Practice &amp; Get Coaching</span>'}</button>
+      <div id="pres-fb" class="mt-4">${fb ? coachHtml(fb) : ''}</div></div>`;
+  }
+  const ask = `<div class="card p-5"><h3 class="font-bold flex items-center gap-2 mb-2"><i data-lucide="bot" class="w-4 h-4 text-cobalt"></i>Ask the Copilot about this deck</h3>
+      <div id="pres-chat" class="space-y-2 mb-3">${P.chat.map(m => m.role === 'user' ? `<div class="bub-u">${esc(m.content)}</div>` : `<div class="bub-a prose-nx">${mdMath(m.content)}</div>`).join('')}</div>
+      <form id="pres-ask" class="flex gap-2"><input id="pres-ask-in" class="fld" style="resize:none" maxlength="1500" placeholder="e.g. Shorten slide 3 to 20 seconds, or explain my slide 5 script"><button class="btn-primary" type="submit" ${P.chatBusy ? 'disabled' : ''}><i data-lucide="send" class="w-4 h-4"></i><span class="sr-only">Ask</span></button></form></div>`;
+  out.innerHTML = head + tabs + body + ask;
+  renderMath(out); icons(); ptPaint();
+}
+function coachHtml(f) {
+  return `<div class="fb-scores"><div class="fb-s"><div class="l">Score</div><div class="v">${f.score}<small>/10</small></div></div>${f.wpm ? `<div class="fb-s"><div class="l">Your pace</div><div class="v">${f.wpm}<small> wpm</small></div></div>` : ''}</div>
+    ${f.clarity_feedback ? `<div class="cue mt-3" style="border-left-color:var(--em-t);background:var(--em-soft)"><b style="color:var(--em-t)">Clarity</b>${esc(f.clarity_feedback)}</div>` : ''}
+    ${(f.pacing_and_tone_tips || []).length ? `<div class="cue mt-3"><b>Pacing &amp; tone tips</b><ul class="list-disc pl-5">${f.pacing_and_tone_tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}
+    ${f.improved_phrasing ? `<div class="cue mt-3" style="border-left-color:var(--co-t);background:var(--co-soft)"><b style="color:var(--co-t)">Improved phrasing</b>${esc(f.improved_phrasing)}</div>` : ''}`;
+}
+
+async function presRun() {
+  if (P.busy) return;
+  const topic = $('#pres-topic').value.trim(), notes = $('#pres-notes').value.trim();
+  if (topic.length < 3 && !P.files.length && notes.length < 20) return toast('Describe your topic or goal first (or add notes / files).', 'error');
+  const fd = new FormData();
+  fd.append('topic', topic); fd.append('duration', P.dur); fd.append('language', P.lang); fd.append('notes', notes);
+  const m = pickedModel(); if (m) fd.append('model', m);
+  P.files.forEach(f => fd.append('files', f, f.name));
+  P.busy = true; renderPres(); stopAllSpeech(); ptStop();
+  try {
+    const d = await postJSON('/api/presentation', { method: 'POST', body: fd });
+    P.deck = d; P.idx = 0; P.tab = 'slide'; P.times = {}; P.fb = {}; P.practice = {}; P.chat = []; PT.acc = 0;
+    presSave(); notifyWarnings(d);
+    toast('Deck ready: ' + d.slides.length + ' slides.', 'success');
+  } catch (e) { toast(e.message, 'error', 9000); }
+  finally { P.busy = false; if (state.ws === 'pres') renderPres(); }
+}
+async function presCoach() {
+  if (P.coachBusy || !P.deck) return;
+  const ta = $('#pres-practice'), text = ta.value.trim(), s = P.deck.slides[P.idx];
+  P.practice[P.idx] = ta.value;
+  if (text.length < 15) return toast('Write or paste at least one sentence of your own delivery first.', 'error');
+  const e = ptElapsed();
+  P.coachBusy = true; $('#pres-coach').disabled = true;
+  try {
+    const d = await postJSON('/api/presentation-coach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      slide_title: s.title, bullet_points: s.bullet_points, speaker_script: s.speaker_script, user_attempt: text, language: P.lang,
+      duration_seconds: e > 3 ? e : null, target_seconds: slideBudget(P.idx), model: pickedModel() }) });
+    P.fb[P.idx] = d; presSave();
+  } catch (err) { toast(err.message, 'error', 9000); }
+  finally { P.coachBusy = false; if (state.ws === 'pres') { const keep = $('#pres-practice') && $('#pres-practice').value; renderPres(); if (keep != null && $('#pres-practice')) $('#pres-practice').value = keep; } }
+}
+function presListen(btn) {
+  if (btn.classList.contains('speaking') || btn.classList.contains('loading')) return stopAllSpeech();
+  const text = P.deck.slides[P.idx].speaker_script.replace(/\[PAUSE\]/gi, '. ');
+  if (P.lang === 'english') return speak(text, btn);
+  stopAllSpeech(); speakBrowser(speechClean(text), btn, PRES_LANG_CODE[P.lang]);
+}
+
+function deckText() {
+  return P.deck.slides.map(s => `Slide ${s.slide_number}: ${s.title}\nBullets: ${(s.bullet_points || []).join(' | ')}\nScript: ${s.speaker_script}\nCoaching: ${s.delivery_coaching}`).join('\n\n').slice(0, SOURCE_TEXT_MAX);
+}
+async function presAsk(q) {
+  if (!P.deck || P.chatBusy || !q.trim()) return;
+  P.chatBusy = true;
+  const history = P.chat.slice(-8).map(m => ({ role: m.role, content: m.content }));
+  P.chat.push({ role: 'user', content: q });
+  const box = $('#pres-chat');
+  box.insertAdjacentHTML('beforeend', `<div class="bub-u">${esc(q)}</div><div class="bub-a prose-nx" id="pres-live"><span class="st-text"></span><span class="caret"></span></div>`);
+  $('#pres-ask-in').value = '';
+  const live = $('#pres-live'), tx = $('.st-text', live); let acc = '';
+  const d = P.deck, summary = `Title: ${d.title}. Duration: ${d.total_duration}. Slides: ` + d.slides.map(s => `${s.slide_number}) ${s.title}`).join('; ') + `. Hook: ${d.opening_hook}. Closing: ${d.closing_statement}`;
+  P.abort = new AbortController();
+  try {
+    await streamChat({ message: q, question: q, history, model: pickedModel(), active_studio: 'presentation', source_titles: [d.title], source_text: deckText(), analysis_summary: summary.slice(0, SUMMARY_MAX), context: '' },
+      P.abort.signal, t => { acc += t; tx.textContent = acc; }, a => { if (a.action === 'export_pdf') setTimeout(presPdf, 60); });
+    acc = acc.trim(); if (!acc) throw new Error('The AI returned an empty answer. Please rephrase and try again.');
+    P.chat.push({ role: 'assistant', content: acc });
+    live.removeAttribute('id'); live.innerHTML = mdMath(acc); renderMath(live);
+  } catch (e) { P.chat.pop(); live.previousElementSibling && live.previousElementSibling.remove(); live.remove(); toast(e.message, 'error', 8000); }
+  finally { P.chatBusy = false; P.abort = null; }
+}
+
+function presPrintHtml() {
+  const d = P.deck, rtl = P.lang === 'arabic' ? ' dir="rtl"' : '';
+  const slides = d.slides.map(s => `<article class="pd-slide"><header><span class="n">${s.slide_number}</span><h3>${esc(s.title)}</h3></header>
+    <div class="pd-sl-body"><div><ul>${(s.bullet_points || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>${s.visual_suggestion ? `<div class="pd-vis"><b>Visual:</b> ${esc(s.visual_suggestion)}</div>` : ''}</div>
+      <div><div class="pd-script"${rtl}>${scriptHtml(s.speaker_script)}</div>${s.delivery_coaching ? `<div class="pd-cue"><b>Delivery:</b> ${scriptHtml(s.delivery_coaching)}</div>` : ''}</div></div></article>`).join('');
+  const qa = (d.qa_prep || []).map((q, i) => `<div class="pd-q"><p class="pd-qt">${i + 1}. ${esc(q.question)}</p><div class="pd-expl prose-nx">${mdMath(q.model_answer)}</div></div>`).join('');
+  let n = 0;
+  return `<header class="pd-brand pd-pres"><div class="pd-top"><span class="pd-logo"><b>N</b>NexaScholar AI</span><span>Presentation &amp; Speaker Notes &middot; ${esc(pdDate())}</span></div><h1>${esc(d.title)}</h1>${d.subtitle ? `<p class="pd-meta">${esc(d.subtitle)}</p>` : ''}<div class="pd-chips"><span>${esc(d.total_duration)}</span><span>${d.slides.length} slides</span><span>${esc(P.lang)}</span></div></header>
+    ${d.opening_hook ? `<div class="pd-hook"><b>Opening hook</b>${esc(d.opening_hook)}</div>` : ''}
+    ${pdSection(++n, 'Slides &amp; Speaker Script', 'c-vi', slides)}
+    ${d.closing_statement ? `<div class="pd-hook"><b>Closing statement</b>${esc(d.closing_statement)}</div>` : ''}
+    ${qa ? pdSection(++n, 'Q&amp;A Preparation', 'c-vi', qa) : ''}
+    <footer class="pd-foot">Generated by NexaScholar AI &middot; Rehearse out loud and adapt the script to your own voice.</footer>`;
+}
+async function presPdf() {
+  if (!P.deck) return;
+  stopAllSpeech();
+  const prev = document.title, pd = $('#printdoc');
+  try {
+    pd.innerHTML = presPrintHtml(); renderMath(pd);
+    try { await document.fonts.ready; } catch (e) { /* ignore */ }
+    document.body.classList.add('print-doc'); document.title = 'NexaScholar - ' + P.deck.title;
+    const restore = () => { document.body.classList.remove('print-doc'); document.title = prev; pd.innerHTML = ''; window.removeEventListener('afterprint', restore); };
+    window.addEventListener('afterprint', restore);
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    window.print();
+  } catch (err) { toast('Could not prepare the PDF: ' + (err && err.message || err), 'error'); }
+}
+function presReset() { ptStop(); stopAllSpeech(); P.deck = null; P.idx = 0; P.fb = {}; P.practice = {}; P.times = {}; P.chat = []; PT.acc = 0; ls.set(PRES_KEY, ''); $('#pres-topic').value = ''; $('#pres-notes').value = ''; P.files = []; renderPresChips(); renderPres(); }
+
+var v41Act = function (name, el) {
+  switch (name) {
+    case 'pres-dur': P.dur = el.dataset.v; presPaintInputs(); return presSave();
+    case 'pres-lang': P.lang = el.dataset.v; presPaintInputs(); if (P.deck) renderPres(); return presSave();
+    case 'pres-addfile': return $('#pres-file').click();
+    case 'pres-rmfile': P.files.splice(+el.dataset.i, 1); return renderPresChips();
+    case 'pres-run': return presRun();
+    case 'pres-go': return presGo(+el.dataset.i);
+    case 'pres-prev': return presGo(P.idx - 1);
+    case 'pres-next': return presGo(P.idx + 1);
+    case 'pres-tab': P.practice[P.idx] = ($('#pres-practice') || {}).value ?? P.practice[P.idx]; P.tab = el.dataset.tab; return renderPres();
+    case 'pt-toggle': return PT.running ? (ptStop(), ptPaint()) : ptStart();
+    case 'pt-reset': ptStop(); PT.acc = 0; P.times[P.idx] = 0; return ptPaint();
+    case 'pres-listen': return presListen(el);
+    case 'pres-coach': return presCoach();
+    case 'pres-pdf': return presPdf();
+  }
+};
+$('#pres-file').addEventListener('change', e => {
+  for (const f of e.target.files) {
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    if (!['pdf', 'png', 'jpg', 'jpeg', 'webp', 'txt', 'md'].includes(ext)) { toast(f.name + ': unsupported file type.', 'error'); continue; }
+    if (f.size > FILE_LIMITS.pdf) { toast(f.name + ' is too large (max 15 MB).', 'error'); continue; }
+    if (P.files.length >= 5) { toast('Up to 5 files per deck.', 'info'); break; }
+    P.files.push(f);
+  }
+  e.target.value = ''; renderPresChips();
+});
+$('#ws-pres').addEventListener('input', e => { if (e.target.id === 'pres-practice') P.practice[P.idx] = e.target.value; });
+$('#ws-pres').addEventListener('submit', e => { if (e.target.id === 'pres-ask') { e.preventDefault(); presAsk($('#pres-ask-in').value); } });
+document.addEventListener('keydown', e => {
+  if (state.ws !== 'pres' || !P.deck || P.tab !== 'slide' || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || ''))) return;
+  if (e.key === 'ArrowRight') presGo(P.idx + 1); else if (e.key === 'ArrowLeft') presGo(P.idx - 1);
+});
+
+/* =====================================================================
+   v4.2: CEFR Language Exam (English wing, tab "exam") via POST /api/cefr-exam
+   ===================================================================== */
+const X = { level: 'B2', timer: 0, phase: 'setup', exam: null, i: 0, picks: [], left: 0, tid: null, busy: false, result: null };
+const XLEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+function examPaintSetup() {
+  $$('#exam-level button').forEach(b => b.classList.toggle('active', b.dataset.v === X.level));
+  $$('#exam-timer button').forEach(b => b.classList.toggle('active', +b.dataset.v === X.timer));
+  const r = $('#exam-start'), run = X.phase === 'run';
+  r.disabled = X.busy;
+  r.innerHTML = X.busy ? '<div class="spinner"></div><span>Writing your exam...</span>' : run ? '<i data-lucide="x" class="w-4 h-4"></i><span>Abandon exam</span>' : '<i data-lucide="play" class="w-4 h-4"></i><span>' + (X.phase === 'done' ? 'Take a new exam' : 'Start exam') + '</span>';
+  $('#exam-hint').textContent = X.level === 'ALL' ? '12 questions, two per level from A1 to C2, to estimate your true level.' : '10 questions at ' + X.level + ': grammar, vocabulary, reading, transformation and error detection.';
+}
+function examStop() { clearInterval(X.tid); X.tid = null; }
+async function examStart() {
+  if (X.busy) return;
+  if (X.phase === 'run') { examStop(); X.phase = 'setup'; X.exam = null; return renderExam(); }
+  X.busy = true; X.phase = 'setup'; renderExam();
+  try {
+    const d = await postJSON('/api/cefr-exam', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ level: X.level, model: pickedModel() }) });
+    X.exam = d; X.i = 0; X.picks = []; X.result = null; X.phase = 'run';
+    X.left = X.timer * 60; examStop();
+    if (X.timer) X.tid = setInterval(examTick, 1000);
+  } catch (e) { toast(e.message, 'error', 9000); }
+  finally { X.busy = false; if (state.ws === 'lab' && state.lab === 'exam') renderExam(); }
+}
+function examTick() {
+  if (X.phase !== 'run') return examStop();
+  X.left--; const t = $('#x-time'); if (t) t.textContent = mmss(Math.max(0, X.left));
+  if (X.left <= 0) { toast('Time is up. Your exam was submitted.', 'info'); examFinish(); }
+}
+function examPick(i) {
+  const q = X.exam.questions[X.i]; if (X.picks[X.i] != null) return;
+  X.picks[X.i] = i; renderExam();
+}
+function examNext() {
+  if (X.picks[X.i] == null) return;
+  if (X.i < X.exam.questions.length - 1) { X.i++; renderExam(); $('#main-scroll').scrollTo({ top: 0 }); } else examFinish();
+}
+function examBreakdown() {
+  const by = {}; X.exam.questions.forEach((q, k) => { const b = by[q.level_tag] || (by[q.level_tag] = { n: 0, ok: 0 }); b.n++; if (X.picks[k] === q.correct_index) b.ok++; });
+  return by;
+}
+/* Estimated level: the highest level whose own score is at least 50% while all levels up to it average at least 60%. */
+function estimateCefr(by, single) {
+  const total = Object.values(by).reduce((a, b) => ({ n: a.n + b.n, ok: a.ok + b.ok }), { n: 0, ok: 0 });
+  if (single) {
+    const pct = total.ok / (total.n || 1), idx = XLEVELS.indexOf(single);
+    if (pct >= 0.7) return { level: single, note: 'Level confirmed' };
+    if (pct >= 0.5) return { level: XLEVELS[Math.max(0, idx - 1)], note: 'Working towards ' + single };
+    return { level: XLEVELS[Math.max(0, idx - 2)], note: 'Below ' + single + ': review the basics' };
+  }
+  let best = null, n = 0, ok = 0;
+  for (const lv of XLEVELS) {
+    const b = by[lv]; if (!b) continue;
+    n += b.n; ok += b.ok;
+    if (b.ok / b.n >= 0.5 && ok / n >= 0.6) best = lv;
+  }
+  return best ? { level: best, note: 'Estimated from your answers across A1 to C2' } : { level: 'A1', note: 'Beginner: start with A1 lessons' };
+}
+function examFinish() {
+  examStop(); if (X.phase !== 'run') return;
+  const by = examBreakdown(), single = X.exam.level === 'ALL' ? null : X.exam.level;
+  const ok = Object.values(by).reduce((a, b) => a + b.ok, 0), n = X.exam.questions.length;
+  X.result = { by, ok, n, est: estimateCefr(by, single), date: new Date().toLocaleDateString(undefined, { dateStyle: 'long' }) };
+  X.phase = 'done'; stats.exams = (stats.exams || 0) + 1; saveStats();
+  renderExam();
+}
+function renderExam() {
+  examPaintSetup();
+  const out = $('#res-lab');
+  if (X.busy) { out.innerHTML = '<div class="card p-6 space-y-3" aria-busy="true"><div class="flex items-center gap-2 text-sm text-amber font-semibold"><span class="pulse-dot"></span>Writing your exam...</div><div class="sk h-5 w-1/2"></div><div class="sk h-24 w-full"></div><div class="sk h-4 w-4/5"></div></div>'; return; }
+  if (X.phase === 'run') {
+    const ex = X.exam, q = ex.questions[X.i], n = ex.questions.length, pick = X.picks[X.i], answered = pick != null;
+    const done = X.picks.filter(p => p != null).length, okSoFar = ex.questions.reduce((a, qq, k) => a + (X.picks[k] === qq.correct_index ? 1 : 0), 0);
+    out.innerHTML = `<div class="card p-5 fade-in">
+      <div class="flex flex-wrap items-center justify-between gap-2"><div class="flex items-center gap-2"><span class="text-sm font-bold">Question ${X.i + 1} / ${n}</span><span class="lvbadge">${esc(q.level_tag)}</span><span class="pill">${esc(String(q.type).replace('_', ' '))}</span></div>
+        <div class="flex items-center gap-3 text-xs font-semibold text-slate-400"><span>Score ${okSoFar}/${done}</span>${X.timer ? `<span class="timer" style="font-size:1rem" id="x-time">${mmss(Math.max(0, X.left))}</span>` : ''}</div></div>
+      <div class="pbar mt-3" role="progressbar" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${done}"><i style="width:${Math.round(done / n * 100)}%"></i></div>
+      ${q.type === 'reading' && ex.passage ? `<div class="xpass mt-4">${esc(ex.passage)}</div>` : ''}
+      <div class="xq">${esc(q.question)}</div>
+      <div class="xopts">${q.options.map((o, i) => `<button class="xopt ${answered ? (i === q.correct_index ? 'ok' : i === pick ? 'bad' : '') : ''}" data-act="exam-pick" data-i="${i}" ${answered ? 'disabled' : ''}><b>${LETTERS[i]}</b><span>${esc(o)}</span></button>`).join('')}</div>
+      ${answered ? `<div class="xexp"><b>${pick === q.correct_index ? 'Correct.' : 'Not quite. The answer is ' + LETTERS[q.correct_index] + '.'}</b> ${esc(q.explanation)}</div>` : ''}
+      <div class="flex justify-end mt-4"><button class="btn-primary" data-act="exam-next" ${answered ? '' : 'disabled'}>${X.i === n - 1 ? 'Finish &amp; see results' : 'Next question'}<i data-lucide="arrow-right" class="w-4 h-4"></i></button></div></div>`;
+  } else if (X.phase === 'done' && X.result) {
+    const r = X.result, pct = Math.round(r.ok / r.n * 100);
+    const rows = XLEVELS.filter(lv => r.by[lv]).map(lv => { const b = r.by[lv], p = Math.round(b.ok / b.n * 100); return `<div class="lvrow"><span class="k">${lv}</span><div class="pbar"><i style="width:${p}%"></i></div><span class="s">${b.ok}/${b.n}</span></div>`; }).join('');
+    const review = X.exam.questions.map((q, k) => { const ok = X.picks[k] === q.correct_index, p = X.picks[k];
+      return `<div class="rv ${ok ? 'ok' : 'bad'}"><div class="flex items-center gap-2 mb-1"><span class="lvbadge">${esc(q.level_tag)}</span><b>${k + 1}. ${esc(q.question)}</b></div>
+        <div class="a">${ok ? 'Your answer (correct): ' : 'Your answer: '}${p == null ? '(no answer)' : esc(q.options[p])}${ok ? '' : ' &middot; Correct: <b>' + esc(q.options[q.correct_index]) + '</b>'}</div><div class="mt-1">${esc(q.explanation)}</div></div>`; }).join('');
+    out.innerHTML = `<div class="cert fade-in"><div class="eyebrow">Estimated CEFR level</div><div class="lv" id="x-est">${esc(r.est.level)}</div><div class="font-bold">${esc(r.est.note)}</div>
+        <div class="text-sm text-slate-400 mt-2">${r.ok} of ${r.n} correct (${pct}%) &middot; ${esc(r.date)}</div>
+        <div class="flex flex-wrap justify-center gap-2 mt-4"><button class="btn-primary" data-act="exam-target"><i data-lucide="target" class="w-4 h-4"></i>Set ${esc(r.est.level)} as my target</button><button class="btn-ghost" data-act="exam-start"><i data-lucide="rotate-ccw" class="w-4 h-4"></i>Retake</button></div>
+        <p class="text-[11px] text-slate-500 mt-3">An AI-generated estimate for study guidance, not an official certificate.</p></div>
+      <div class="card p-5"><h3 class="font-bold mb-3 flex items-center gap-2"><i data-lucide="chart-bar" class="w-4 h-4 text-amber"></i>Score by CEFR level</h3><div class="space-y-2">${rows}</div></div>
+      <div class="card p-5"><h3 class="font-bold mb-3 flex items-center gap-2"><i data-lucide="list-checks" class="w-4 h-4 text-emerald"></i>Answers &amp; explanations</h3>${review}</div>`;
+  } else {
+    out.innerHTML = `<div class="card p-8 text-center"><div class="w-14 h-14 rounded-2xl bg-amber-soft text-amber mx-auto flex items-center justify-center mb-4"><i data-lucide="award" class="w-7 h-7"></i></div><h3 class="text-lg font-extrabold">CEFR Language Exam</h3>
+      <ul class="text-sm text-slate-500 mt-3 space-y-1.5 max-w-sm mx-auto text-left">${['Pick one level, or All Levels for a 12-question A1 to C2 placement', 'Instant grading with an explanation for every answer', 'Score breakdown per level and an estimated CEFR level'].map(h => `<li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-amber mt-0.5 shrink-0"></i>${h}</li>`).join('')}</ul></div>`;
+  }
+  renderMath(out); icons();
+}
+const _v41Act = v41Act;
+v41Act = function (name, el) {
+  switch (name) {
+    case 'exam-level': X.level = el.dataset.v; return examPaintSetup();
+    case 'exam-timer': X.timer = +el.dataset.v; return examPaintSetup();
+    case 'exam-start': return examStart();
+    case 'exam-pick': return examPick(+el.dataset.i);
+    case 'exam-next': return examNext();
+    case 'exam-target': setCefr(X.result.est.level); return toast('Target level set to ' + X.result.est.level + '.', 'success');
+  }
+  return _v41Act(name, el);
+};
+
+
+/* =====================================================================
+   v4.3: Spaced Repetition (localStorage "nexascholar_srs"): Paper + Code lessons, intervals 1, 3, 7, 14, 30 days
+   ===================================================================== */
+const SRS_KEY = 'nexascholar_srs', SRS_STEPS = [1, 3, 7, 14, 30], SRS_DAY = 86400000;
+var SRS = { items: [], review: null };
+function srsLoad() { try { const a = JSON.parse(ls.get(SRS_KEY) || '[]'); SRS.items = Array.isArray(a) ? a.filter(x => x && x.id && x.due) : []; } catch (e) { SRS.items = []; } }
+function srsSave() { ls.set(SRS_KEY, JSON.stringify(SRS.items)); }
+function srsEnroll(s) {
+  if (!s || !(s.type === 'paper' || s.type === 'code') || SRS.items.some(x => x.id === s.id)) return;
+  SRS.items.push({ id: s.id, title: s.title, type: s.type, stage: 0, due: (s.createdAt || Date.now()) + SRS_DAY, reviews: 0, last: null });
+}
+function srsSync() {
+  const live = new Set(sessions.map(s => s.id));
+  SRS.items = SRS.items.filter(x => live.has(x.id));
+  sessions.forEach(s => { srsEnroll(s); const it = SRS.items.find(x => x.id === s.id); if (it) it.title = s.title; });
+  srsSave();
+}
+const srsDue = () => SRS.items.filter(x => x.due <= Date.now()).sort((a, b) => a.due - b.due);
+const srsNextStage = (it, q) => q === 'hard' ? 0 : Math.min(4, it.stage + (q === 'easy' ? 2 : 1));
+const srsDays = (it, q) => (q === 'easy' && it.stage >= 4) ? 60 : SRS_STEPS[srsNextStage(it, q)];
+function srsRate(q) {
+  const it = SRS.items.find(x => x.id === SRS.review); if (!it) return;
+  const days = srsDays(it, q);
+  it.stage = srsNextStage(it, q); it.due = Date.now() + days * SRS_DAY; it.last = Date.now(); it.reviews++;
+  SRS.review = null; srsSave(); srsPaint();
+  toast('Next review in ' + days + ' day' + (days === 1 ? '' : 's') + ' (' + new Date(it.due).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ').', 'success');
+}
+function srsOpen(id) {
+  if (!sessions.some(s => s.id === id)) return;
+  SRS.review = id; openSession(id); srsPaint();
+}
+function srsPaint() {
+  srsSync();
+  const dash = $('#dash-due');
+  if (dash) {
+    const due = srsDue();
+    dash.innerHTML = due.length ? `<div class="due-card"><div class="flex items-center gap-2 mb-1"><i data-lucide="alarm-clock" class="w-4 h-4 text-amber"></i><h3 class="font-bold text-sm">Due for Review</h3><span class="due-badge" id="due-count">${due.length}</span></div>
+      ${due.slice(0, 6).map(x => `<div class="due-row"><div class="min-w-0 flex-1"><div class="n">${esc(x.title)}</div><div class="m">${x.type === 'paper' ? 'Paper studio' : 'Code studio'} &middot; review #${x.reviews + 1} &middot; ${Math.max(0, Math.floor((Date.now() - x.due) / SRS_DAY))} d overdue</div></div><button class="btn-ghost" data-srs="open" data-id="${esc(x.id)}">Review</button></div>`).join('')}
+      ${due.length > 6 ? `<p class="text-xs text-slate-400 mt-2">+ ${due.length - 6} more due</p>` : ''}</div>`
+      : (SRS.items.length ? `<div class="due-card" style="border-color:var(--line);background:var(--fill)"><div class="flex items-center gap-2"><i data-lucide="circle-check" class="w-4 h-4 text-emerald"></i><h3 class="font-bold text-sm">Due for Review</h3><span class="due-badge" id="due-count" style="background:var(--em-soft);color:var(--em-t);border-color:rgba(52,211,153,.5)">0</span></div><p class="text-xs text-slate-400 mt-1">All caught up. Next review: ${new Date(Math.min(...SRS.items.map(x => x.due))).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}.</p></div>` : '');
+  }
+  const bar = $('#srs-bar'), it = SRS.review && SRS.items.find(x => x.id === SRS.review);
+  const on = !!it && (state.ws === 'paper' || state.ws === 'code') && W[state.ws].activeId === SRS.review;
+  bar.classList.toggle('show', on);
+  if (on) {
+    $('#srs-title').textContent = it.title;
+    $('#srs-hard').textContent = 'Hard 1d'; $('#srs-good').textContent = 'Good ' + srsDays(it, 'good') + 'd'; $('#srs-easy').textContent = 'Easy ' + srsDays(it, 'easy') + 'd';
+  }
+  icons();
+}
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-srs]'); if (!el) return;
+  const a = el.dataset.srs;
+  if (a === 'open') srsOpen(el.dataset.id);
+  else if (a === 'skip') { SRS.review = null; srsPaint(); }
+  else srsRate(a);
+});
+srsLoad(); srsSync(); window.__srs = true; srsPaint();
+
+presLoad(); window.__v41 = true; if (state.ws === 'pres') renderPres();
 
 </script>
 </body>
